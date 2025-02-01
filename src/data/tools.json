@@ -1,0 +1,66 @@
+{
+  "tools": [
+    {
+      "id": "1",
+      "name": "GitHub",
+      "description": "Version control platform, bla bla bla lorem ipsum dolor sit amet lorem",
+      "url": "https://github.com",
+      "logoPath": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+      "requiresCheckout": true,
+      "maxCheckouts": 3,
+      "category": "development",
+      "tags": ["version-control", "collaboration"]
+    },
+    {
+      "id": "2",
+      "name": "Figma",
+      "description": "Design tool",
+      "url": "https://figma.com",
+      "logoPath": "https://cdn.iconscout.com/icon/free/png-256/figma-3521426-2944870.png",
+      "requiresCheckout": false,
+      "category": "design",
+      "tags": ["design", "prototyping"]
+    },
+    {
+      "id": "3",
+      "name": "VS Code",
+      "description": "Code editor",
+      "url": "https://code.visualstudio.com",
+      "logoPath": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Visual_Studio_Code_1.35_icon.svg/2048px-Visual_Studio_Code_1.35_icon.svg.png",
+      "requiresCheckout": true,
+      "maxCheckouts": 5,
+      "category": "development",
+      "tags": ["editor", "development"]
+    },
+    {
+      "id": "4",
+      "name": "Notion",
+      "description": "Project management tool",
+      "url": "https://notion.so",
+      "logoPath": "https://www.notion.so/images/logo.svg",
+      "requiresCheckout": false,
+      "category": "project-management",
+      "tags": ["project-management", "collaboration"]
+    },
+    {
+      "id": "5",
+      "name": "Notion",
+      "description": "Project management tool",
+      "url": "https://notion.so",
+      "logoPath": "https://www.notion.so/images/logo.svg",
+      "maxCheckouts": 2,
+      "category": "project-management",
+      "tags": ["project-management", "collaboration"]
+    },
+    {
+      "id": "6",
+      "name": "Notion",
+      "description": "Project management tool",
+      "url": "https://notion.so",
+      "logoPath": "https://www.notion.so/images/logo.svg",
+      "maxCheckouts": 2,
+      "category": "project-management",
+      "tags": ["project-management", "collaboration"]
+    }
+  ]
+} 
