@@ -6,16 +6,24 @@ const ToolContext = createContext();
 export function ToolProvider({ children }) {
   const [tools] = useState(toolsData.tools);
   const [filteredTools, setFilteredTools] = useState(tools);
-  const [checkouts, setCheckouts] = useState(() => {
-    const saved = localStorage.getItem('toolCheckouts');
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [checkouts, setCheckouts] = useState({});
 
+  // Fetch initial checkouts
   useEffect(() => {
-    localStorage.setItem('toolCheckouts', JSON.stringify(checkouts));
-  }, [checkouts]);
+    fetchCheckouts();
+  }, []);
 
-  const checkoutTool = (toolId, initials) => {
+  const fetchCheckouts = async () => {
+    try {
+      const response = await fetch('/api/checkouts');
+      const data = await response.json();
+      setCheckouts(data);
+    } catch (error) {
+      console.error('Failed to fetch checkouts:', error);
+    }
+  };
+
+  const checkoutTool = async (toolId, initials) => {
     const tool = tools.find(t => t.id === toolId);
     const currentCheckouts = checkouts[toolId] || [];
     
@@ -23,17 +31,35 @@ export function ToolProvider({ children }) {
       throw new Error('Maximum checkouts reached');
     }
 
-    setCheckouts(prev => ({
-      ...prev,
-      [toolId]: [...(prev[toolId] || []), { initials, timestamp: new Date().toISOString() }]
-    }));
+    try {
+      const response = await fetch('/api/checkouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toolId, action: 'checkout', initials })
+      });
+      
+      const updatedCheckouts = await response.json();
+      setCheckouts(updatedCheckouts);
+    } catch (error) {
+      console.error('Failed to checkout tool:', error);
+      throw error;
+    }
   };
 
-  const checkinTool = (toolId, initials) => {
-    setCheckouts(prev => ({
-      ...prev,
-      [toolId]: (prev[toolId] || []).filter(checkout => checkout.initials !== initials)
-    }));
+  const checkinTool = async (toolId, initials) => {
+    try {
+      const response = await fetch('/api/checkouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toolId, action: 'checkin', initials })
+      });
+      
+      const updatedCheckouts = await response.json();
+      setCheckouts(updatedCheckouts);
+    } catch (error) {
+      console.error('Failed to checkin tool:', error);
+      throw error;
+    }
   };
 
   return (

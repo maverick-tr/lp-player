@@ -2,65 +2,89 @@
   "tools": [
     {
       "id": "1",
-      "name": "GitHub",
-      "description": "Version control platform, bla bla bla lorem ipsum dolor sit amet lorem",
-      "url": "https://github.com",
-      "logoPath": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-      "requiresCheckout": true,
-      "maxCheckouts": 3,
-      "category": "development",
-      "tags": ["version-control", "collaboration"]
+      "name": "ORA",
+      "description": "All things AI Studio for our local AI Lab",
+      "url": "https://ora.luxson.uk",
+      "logoPath": "images/ora_favicon.png",
+      "requiresCheckout": false,
+      "category": "AI",
+      "tags": ["AI", "Hub", "AI Lab", "Models", "Ora Mini", "Frijj", "AI Studio", "Sami"]
     },
     {
       "id": "2",
-      "name": "Figma",
-      "description": "Design tool",
-      "url": "https://figma.com",
-      "logoPath": "https://cdn.iconscout.com/icon/free/png-256/figma-3521426-2944870.png",
-      "requiresCheckout": false,
-      "category": "design",
-      "tags": ["design", "prototyping"]
+      "name": "Neo",
+      "description": "Pdf ProofReader Agent, Decoding PDFs one page at a time",
+      "url": "https://neo.luxson.uk",
+      "logoPath": "images/neo_logo.png",
+      "requiresCheckout": true,
+      "maxCheckouts": 1,
+      "category": "media",
+      "tags": ["design", "media", "pdf", "proofreader", "neo", "brochures"]
     },
     {
       "id": "3",
-      "name": "VS Code",
-      "description": "Code editor",
-      "url": "https://code.visualstudio.com",
-      "logoPath": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Visual_Studio_Code_1.35_icon.svg/2048px-Visual_Studio_Code_1.35_icon.svg.png",
+      "name": "Bolt",
+      "description": "AI Full Stack Code Builder",
+      "url": "https://bolt.luxson.uk",
+      "logoPath": "images/bolt.svg",
       "requiresCheckout": true,
-      "maxCheckouts": 5,
-      "category": "development",
-      "tags": ["editor", "development"]
+      "maxCheckouts": 1,
+      "category": "developer-agents",
+      "tags": ["editor", "development", "bolt", "ai", "code", "builder", "AI Agent"]
     },
     {
       "id": "4",
-      "name": "Notion",
-      "description": "Project management tool",
-      "url": "https://notion.so",
-      "logoPath": "https://www.notion.so/images/logo.svg",
+      "name": "Luxson Project Maker",
+      "description": "New Project Setup Tool",
+      "url": "files/luxson_project_maker.bat",
+      "logoPath": "images/luxson_project_maker.png",
       "requiresCheckout": false,
       "category": "project-management",
-      "tags": ["project-management", "collaboration"]
+      "tags": ["project-management", "project setup", "luxson project maker"]
     },
     {
       "id": "5",
-      "name": "Notion",
-      "description": "Project management tool",
-      "url": "https://notion.so",
-      "logoPath": "https://www.notion.so/images/logo.svg",
+      "name": "ComfyUI",
+      "description": "Media Generation Tool - Image, Video, Audio, 3D, and more",
+      "url": "https://comfy.luxson.uk",
+      "logoPath": "images/comfyui-color.svg",
+      "requiresCheckout": true,
       "maxCheckouts": 2,
-      "category": "project-management",
-      "tags": ["project-management", "collaboration"]
+      "category": "media",
+      "tags": ["media", "image", "video", "audio", "3d", "comfyui"]
     },
     {
       "id": "6",
-      "name": "Notion",
-      "description": "Project management tool",
-      "url": "https://notion.so",
-      "logoPath": "https://www.notion.so/images/logo.svg",
+      "name": "STS Mania",
+      "description": "AI Voice Generator, TTS, STT, and more",
+      "url": "https://sts.luxson.uk",
+      "logoPath": "images/ai-sts.jpg",
+      "requiresCheckout": true,
       "maxCheckouts": 2,
-      "category": "project-management",
-      "tags": ["project-management", "collaboration"]
+      "category": "audio",
+      "tags": ["sts", "audio", "tts", "stt", "voice", "generator"]
+    },
+    {
+      "id": "7",
+      "name": "Universal Commpand Line GUI",
+      "description": "Gui interface for the Commands",
+      "url": "https://commandline.luxson.uk",
+      "logoPath": "images/command-line.png",
+      "requiresCheckout": true,
+      "maxCheckouts": 3,
+      "category": "scripting",
+      "tags": ["commandline", "gui", "interface", "scripts", "tools"]
+    },
+    {
+      "id": "8",
+      "name": "FluxGym",
+      "description": "Flux LORA Training Inferenace for Flux Models",
+      "url": "https://fluxgym.luxson.uk",
+      "logoPath": "images/fluxgym.png",
+      "requiresCheckout": true,
+      "maxCheckouts": 1,
+      "category": "media",
+      "tags": ["flux", "lora", "training", "inference", "models", "comfyui"]
     }
   ]
 } 
