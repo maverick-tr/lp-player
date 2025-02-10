@@ -85,6 +85,24 @@
       "maxCheckouts": 1,
       "category": "media",
       "tags": ["flux", "lora", "training", "inference", "models", "comfyui"]
+    },
+    {
+      "id": "example-download-tool",
+      "name": "Example Download Tool",
+      "description": "This tool provides a downloadable resource",
+      "logoPath": "/images/download-tool-logo.png",
+      "type": "download",
+      "url": "/files/example.pdf",
+      "requiresCheckout": false
+    },
+    {
+      "id": "external-download-tool",
+      "name": "External Download",
+      "description": "Downloads from external source",
+      "logoPath": "/images/external-download-logo.png",
+      "type": "download",
+      "url": "https://example.com/files/resource.pdf",
+      "requiresCheckout": false
     }
   ]
 } 

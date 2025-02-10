@@ -3,25 +3,20 @@ import { createContext, useContext, useState, useEffect } from 'react';
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
+  // Initialize with session preference or default to dark
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem('theme');
-      return saved ? JSON.parse(saved) : true;
-    } catch (error) {
-      // If there's any error reading from localStorage, default to dark mode
-      return true;
-    }
+    const savedTheme = sessionStorage.getItem('theme');
+    return savedTheme ? savedTheme === 'dark' : true;
   });
 
+  // Save to sessionStorage whenever theme changes
   useEffect(() => {
-    try {
-      localStorage.setItem('theme', JSON.stringify(isDarkMode));
-    } catch (error) {
-      console.warn('Failed to save theme preference:', error);
-    }
+    sessionStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
-  const toggleTheme = () => setIsDarkMode(prev => !prev);
+  const toggleTheme = () => {
+    setIsDarkMode(prev => !prev);
+  };
 
   return (
     <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
@@ -31,9 +26,5 @@ export function ThemeProvider({ children }) {
 }
 
 export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
+  return useContext(ThemeContext);
 } 

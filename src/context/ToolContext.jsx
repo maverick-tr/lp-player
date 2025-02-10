@@ -15,11 +15,18 @@ export function ToolProvider({ children }) {
 
   const fetchCheckouts = async () => {
     try {
-      const response = await fetch('/api/checkouts');
+      // Use full URL in production
+      const baseUrl = import.meta.env.PROD ? 'http://localhost:3015' : '';
+      const response = await fetch(`${baseUrl}/api/checkouts`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
       setCheckouts(data);
     } catch (error) {
       console.error('Failed to fetch checkouts:', error);
+      // Initialize with empty checkouts rather than failing
+      setCheckouts({});
     }
   };
 
@@ -32,7 +39,9 @@ export function ToolProvider({ children }) {
     }
 
     try {
-      const response = await fetch('/api/checkouts', {
+      // Use full URL in production
+      const baseUrl = import.meta.env.PROD ? 'http://localhost:3015' : '';
+      const response = await fetch(`${baseUrl}/api/checkouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ toolId, action: 'checkout', initials })
@@ -48,7 +57,9 @@ export function ToolProvider({ children }) {
 
   const checkinTool = async (toolId, initials) => {
     try {
-      const response = await fetch('/api/checkouts', {
+      // Use full URL in production
+      const baseUrl = import.meta.env.PROD ? 'http://localhost:3015' : '';
+      const response = await fetch(`${baseUrl}/api/checkouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ toolId, action: 'checkin', initials })

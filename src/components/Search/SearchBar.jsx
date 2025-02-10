@@ -1,27 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTools } from '../../context/ToolContext';
 import { useTheme } from '../../context/ThemeContext';
 import { motion } from 'framer-motion';
 
 function SearchBar() {
-  const [query, setQuery] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
-  const { setFilteredTools, tools } = useTools();
+  const { tools, setFilteredTools } = useTools();
   const { isDarkMode } = useTheme();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
 
-  const handleSearch = (e) => {
-    const value = e.target.value;
-    setQuery(value);
-    
-    const filtered = tools.filter(tool => 
-      tool.name.toLowerCase().includes(value.toLowerCase()) ||
-      tool.description.toLowerCase().includes(value.toLowerCase()) ||
-      tool.url.toLowerCase().includes(value.toLowerCase()) ||
-      tool.tags.some(tag => tag.toLowerCase().includes(value.toLowerCase()))
-    );
-    
+  useEffect(() => {
+    const filtered = tools.filter(tool => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        tool.name.toLowerCase().includes(searchLower) ||
+        tool.description.toLowerCase().includes(searchLower) ||
+        // Safely check for tags and other properties
+        (tool.tags || []).some(tag => 
+          tag.toLowerCase().includes(searchLower)
+        ) ||
+        (tool.category || '').toLowerCase().includes(searchLower) ||
+        (tool.url || '').toLowerCase().includes(searchLower)
+      );
+    });
     setFilteredTools(filtered);
-  };
+  }, [searchTerm, tools, setFilteredTools]);
 
   return (
     <motion.div 
@@ -34,8 +37,8 @@ function SearchBar() {
     >
       <input
         type="text"
-        value={query}
-        onChange={handleSearch}
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder="Search tools by name, URL, or tags..."

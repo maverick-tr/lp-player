@@ -7,9 +7,16 @@ export default defineConfig({
     port: 5181,
     proxy: {
       '/api': {
-        target: 'http://localhost:3010',
+        target: 'http://localhost:3015',
         changeOrigin: true,
+        secure: false,
       },
     },
   },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
+    sourcemap: true
+  }
 }) 

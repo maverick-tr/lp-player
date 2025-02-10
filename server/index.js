@@ -48,7 +48,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-const PORT = process.env.PORT || 3010;
+const PORT = process.env.PORT || 3015;
 app.listen(PORT, () => {
   console.log(`Production server running at http://localhost:${PORT}`);
 });
