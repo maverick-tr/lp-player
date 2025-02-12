@@ -36,8 +36,9 @@
       "id": "4",
       "name": "Luxson Project Maker",
       "description": "New Project Setup Tool",
-      "url": "files/luxson_project_maker.bat",
+      "url": "files/LuxsonTemplateProjectMaker.bat",
       "logoPath": "images/luxson_project_maker.png",
+      "type": "download",
       "requiresCheckout": false,
       "category": "project-management",
       "tags": ["project-management", "project setup", "luxson project maker"]
@@ -66,43 +67,24 @@
     },
     {
       "id": "7",
-      "name": "Universal Commpand Line GUI",
-      "description": "Gui interface for the Commands",
-      "url": "https://commandline.luxson.uk",
+      "name": "ORA/AI Prompt Generator",
+      "description": "Utility to generate large context prompts for AI models",
+      "url": "http://192.168.24.6:5500/",
       "logoPath": "images/command-line.png",
-      "requiresCheckout": true,
-      "maxCheckouts": 3,
+      "requiresCheckout": false,
       "category": "scripting",
-      "tags": ["commandline", "gui", "interface", "scripts", "tools"]
+      "tags": ["ai", "gui", "interface", "scripts", "tools", "ora", "ai prompt generator"]
     },
     {
       "id": "8",
       "name": "FluxGym",
       "description": "Flux LORA Training Inferenace for Flux Models",
       "url": "https://fluxgym.luxson.uk",
-      "logoPath": "images/fluxgym.png",
+      "logoPath": "images/fluxgym-logo.webp",
       "requiresCheckout": true,
       "maxCheckouts": 1,
       "category": "media",
       "tags": ["flux", "lora", "training", "inference", "models", "comfyui"]
-    },
-    {
-      "id": "example-download-tool",
-      "name": "Example Download Tool",
-      "description": "This tool provides a downloadable resource",
-      "logoPath": "/images/download-tool-logo.png",
-      "type": "download",
-      "url": "/files/example.pdf",
-      "requiresCheckout": false
-    },
-    {
-      "id": "external-download-tool",
-      "name": "External Download",
-      "description": "Downloads from external source",
-      "logoPath": "/images/external-download-logo.png",
-      "type": "download",
-      "url": "https://example.com/files/resource.pdf",
-      "requiresCheckout": false
     }
   ]
 } 
