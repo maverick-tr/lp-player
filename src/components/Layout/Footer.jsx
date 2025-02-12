@@ -6,11 +6,21 @@ function Footer() {
   
   return (
     <footer className={`
-      fixed bottom-0 left-0 right-0 py-3 px-4
-      ${isDarkMode ? 'bg-tool-darker' : 'bg-white'}
-      border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}
+      fixed bottom-0 w-full py-4
+      transition-colors duration-200
+      z-50
+      ${isDarkMode 
+        ? 'bg-[#000000] text-gray-400'
+        : 'bg-white text-gray-600'
+      }
+      border-t
+      ${isDarkMode 
+        ? 'border-tool-border' 
+        : 'border-gray-200'
+      }
+      shadow-lg
     `}>
-      <div className="container mx-auto flex justify-between items-center">
+      <div className="container mx-auto px-4 flex justify-between items-center backdrop-blur-none">
         <HeartbeatMonitor name="Merlin" ip="192.168.24.100" />
         <span className={`
           text-xs font-medium

@@ -15,8 +15,8 @@ export function ToolProvider({ children }) {
 
   const fetchCheckouts = async () => {
     try {
-      // Use full URL in production
-      const baseUrl = import.meta.env.PROD ? 'http://localhost:3015' : '';
+      // Use relative URL in both development and production.
+      const baseUrl = ''; 
       const response = await fetch(`${baseUrl}/api/checkouts`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -39,8 +39,7 @@ export function ToolProvider({ children }) {
     }
 
     try {
-      // Use full URL in production
-      const baseUrl = import.meta.env.PROD ? 'http://localhost:3015' : '';
+      const baseUrl = '';  // Use relative URL
       const response = await fetch(`${baseUrl}/api/checkouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,8 +56,7 @@ export function ToolProvider({ children }) {
 
   const checkinTool = async (toolId, initials) => {
     try {
-      // Use full URL in production
-      const baseUrl = import.meta.env.PROD ? 'http://localhost:3015' : '';
+      const baseUrl = '';  // Use relative URL
       const response = await fetch(`${baseUrl}/api/checkouts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
