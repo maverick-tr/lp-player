@@ -14,6 +14,14 @@ function ToolCard({ tool, onCheckout }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
 
+  const firstGlowColor = isMaxedOut
+    ? (isDarkMode ? 'rgba(128,0,0,0.25)' : 'rgba(128,0,0,0.3)')
+    : (isDarkMode ? 'rgba(188,204,15,0.15)' : 'rgba(188,204,15,0.12)');
+
+  const secondGlowColor = isMaxedOut
+    ? (isDarkMode ? 'rgba(128,0,0,0.15)' : 'rgba(128,0,0,0.2)')
+    : (isDarkMode ? 'rgba(188,204,15,0.05)' : 'rgba(188,204,15,0.06)');
+
   const handleMouseMove = (e) => {
     if (!cardRef.current) return;
     
@@ -90,19 +98,15 @@ function ToolCard({ tool, onCheckout }) {
         '--card-bg': isDarkMode ? 'rgba(188,204,15,0.03)' : 'rgba(188,204,15,0.015)'
       }}
     >
-      {/* Glow Effect Layer */}
+      {/* Updated Glow Effect Layer */}
       <div 
         className="absolute inset-0 pointer-events-none transition-opacity duration-300"
         style={{
           opacity: isHovering ? 1 : 0,
           backgroundImage: `radial-gradient(
             600px circle at ${mousePosition.x}px ${mousePosition.y}px,
-            ${isDarkMode 
-              ? 'rgba(188,204,15,0.15)' 
-              : 'rgba(188,204,15,0.12)'} 0%,
-            ${isDarkMode 
-              ? 'rgba(188,204,15,0.05)' 
-              : 'rgba(188,204,15,0.06)'} 20%,
+            ${firstGlowColor} 0%,
+            ${secondGlowColor} 20%,
             transparent 50%
           )`,
           mixBlendMode: isDarkMode ? 'screen' : 'multiply'
