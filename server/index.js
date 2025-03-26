@@ -3,6 +3,7 @@ import pkg from 'ping';
 const { promise: pingPromise } = pkg;
 import cors from 'cors';
 import { getCheckouts, updateCheckout } from './api/checkouts.js';
+import { getTools, updateTools } from './api/tools.js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -38,6 +39,10 @@ app.get('/api/ping/:ip', async (req, res) => {
 app.get('/test', (req, res) => {
   res.json({ message: 'Server is running!' });
 });
+
+// Add tools API routes
+app.get('/api/tools', getTools);
+app.post('/api/tools', updateTools);
 
 // Add these routes
 app.get('/api/checkouts', getCheckouts);

@@ -1,9 +1,12 @@
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../hooks/useTheme';
 import { motion } from 'framer-motion';
 import ThemeToggle from './ThemeToggle';
+import { useState, memo } from 'react';
+import AddAppModal from '../Modals/AddAppModal';
 
-function Header() {
-  const { isDarkMode, toggleTheme } = useTheme();
+const Header = memo(function Header() {
+  const { isDarkMode } = useTheme();
+  const [showAddAppModal, setShowAddAppModal] = useState(false);
 
   return (
     <header className={`
@@ -12,38 +15,43 @@ function Header() {
     `}>
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
-          {/* Spacer for left side */}
-          <div className="w-10" /> 
+          {/* Left side - Add Button */}
+          <div className="w-10">
+            <motion.button
+              onClick={() => setShowAddAppModal(true)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className={`
+                flex items-center justify-center w-8 h-8 rounded-full
+                ${isDarkMode 
+                  ? 'bg-tool-light text-[#bccc0f] hover:bg-tool-accent-light' 
+                  : 'bg-tool-light-mode-card text-tool-light-mode-accent hover:bg-gray-200'
+                }
+                transition-colors duration-200
+              `}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+            </motion.button>
+          </div>
           
           {/* Centered Logo */}
           <div className="flex justify-center flex-1">
             <motion.img 
-              src="/images/luxson.png" 
-              alt="Luxson" 
+              src="/images/luxson-logo.png" 
+              alt="LAP - Local App Manager" 
               className="h-24 w-auto object-contain"
               initial={{ scale: 1 }}
               animate={[
-                // Initial animation sequence
+                // Simplified animation to reduce rendering overhead
                 {
                   scale: [1, 1.05, 1],
                   transition: {
-                    duration: 1,
-                    times: [0, 0.5, 1],
-                    repeat: 1,
-                    repeatDelay: 0.5
-                  }
-                },
-                // Glow animation
-                {
-                  filter: [
-                    `brightness(1) drop-shadow(0 0 15px ${isDarkMode ? 'rgba(188,204,15,0.4)' : 'rgba(188,204,15,0.1)'})`,
-                    `brightness(1.1) drop-shadow(0 0 25px ${isDarkMode ? 'rgba(188,204,15,0.6)' : 'rgba(188,204,15,0.2)'})`,
-                    `brightness(1) drop-shadow(0 0 15px ${isDarkMode ? 'rgba(188,204,15,0.4)' : 'rgba(188,204,15,0.1)'})`
-                  ],
-                  transition: {
                     duration: 2,
+                    times: [0, 0.5, 1],
                     repeat: Infinity,
-                    ease: "easeInOut"
+                    repeatDelay: 3
                   }
                 }
               ]}
@@ -57,8 +65,13 @@ function Header() {
           </div>
         </div>
       </div>
+
+      {/* Add App Modal */}
+      {showAddAppModal && (
+        <AddAppModal onClose={() => setShowAddAppModal(false)} />
+      )}
     </header>
   );
-}
+});
 
 export default Header; 

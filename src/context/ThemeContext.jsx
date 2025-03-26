@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect } from 'react';
 
-const ThemeContext = createContext();
+// Export the context directly
+export const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   // Initialize with session preference or default to dark
@@ -23,8 +24,4 @@ export function ThemeProvider({ children }) {
       {children}
     </ThemeContext.Provider>
   );
-}
-
-export function useTheme() {
-  return useContext(ThemeContext);
 } 

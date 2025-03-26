@@ -1,12 +1,15 @@
 import { ToolProvider } from './context/ToolContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { useTheme } from './context/ThemeContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { useTheme } from './hooks/useTheme';
 import ToolGrid from './components/ToolGrid/ToolGrid';
 import SearchBar from './components/Search/SearchBar';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
+import { memo } from 'react';
 
-function AppContent() {
+// Use memo for the AppContent component to prevent unnecessary re-renders
+const AppContent = memo(function AppContent() {
   const { isDarkMode } = useTheme();
 
   return (
@@ -22,14 +25,18 @@ function AppContent() {
       <Footer />
     </div>
   );
-}
+});
 
 function App() {
+  document.title = "LAP - Local App Manager";
+  
   return (
     <ThemeProvider>
-      <ToolProvider>
-        <AppContent />
-      </ToolProvider>
+      <NotificationProvider>
+        <ToolProvider>
+          <AppContent />
+        </ToolProvider>
+      </NotificationProvider>
     </ThemeProvider>
   );
 }

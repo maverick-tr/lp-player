@@ -1,30 +1,44 @@
-import { useState, useEffect } from 'react';
-import { useTools } from '../../context/ToolContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useState, useEffect, useCallback, memo } from 'react';
+import { useTools } from '../../hooks/useTools';
+import { useTheme } from '../../hooks/useTheme';
 import { motion } from 'framer-motion';
 
-function SearchBar() {
-  const { tools, setFilteredTools } = useTools();
+// Debounce function to reduce search renders
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  
+  return debouncedValue;
+}
+
+// Use memo to prevent unnecessary re-renders
+const SearchBar = memo(function SearchBar() {
+  const { filterTools } = useTools();
   const { isDarkMode } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-
+  
+  // Debounce search input to reduce render frequency
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  
+  // Use the filterTools callback from context with debounced value
   useEffect(() => {
-    const filtered = tools.filter(tool => {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        tool.name.toLowerCase().includes(searchLower) ||
-        tool.description.toLowerCase().includes(searchLower) ||
-        // Safely check for tags and other properties
-        (tool.tags || []).some(tag => 
-          tag.toLowerCase().includes(searchLower)
-        ) ||
-        (tool.category || '').toLowerCase().includes(searchLower) ||
-        (tool.url || '').toLowerCase().includes(searchLower)
-      );
-    });
-    setFilteredTools(filtered);
-  }, [searchTerm, tools, setFilteredTools]);
+    filterTools(debouncedSearchTerm);
+  }, [debouncedSearchTerm, filterTools]);
+  
+  // Memoize the change handler
+  const handleSearchChange = useCallback((e) => {
+    setSearchTerm(e.target.value);
+  }, []);
 
   return (
     <motion.div 
@@ -38,7 +52,7 @@ function SearchBar() {
       <input
         type="text"
         value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        onChange={handleSearchChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder="Search tools by name, URL, or tags..."
@@ -70,6 +84,6 @@ function SearchBar() {
       </div>
     </motion.div>
   );
-}
+});
 
 export default SearchBar; 

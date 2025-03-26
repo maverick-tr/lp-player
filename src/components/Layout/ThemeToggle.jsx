@@ -1,6 +1,6 @@
 import { SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme } from '../../hooks/useTheme';
 
 function ThemeToggle() {
   const { isDarkMode, toggleTheme } = useTheme();
@@ -19,7 +19,7 @@ function ThemeToggle() {
       `}
     >
       {isDarkMode ? (
-        <SunIcon className="w-5 h-5 text-tool-accent" />
+        <SunIcon className="w-5 h-5 text-[#bccc0f]" />
       ) : (
         <MoonIcon className="w-5 h-5 text-tool-light-mode-accent" />
       )}

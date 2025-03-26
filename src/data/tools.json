@@ -8,7 +8,25 @@
       "logoPath": "images/ora_favicon.png",
       "requiresCheckout": false,
       "category": "AI",
-      "tags": ["AI", "Hub", "AI Lab", "Models", "Ora Mini", "Frijj", "AI Studio", "Sami"]
+      "port": "",
+      "tags": [
+        "AI",
+        "Hub",
+        "AI Lab",
+        "Models",
+        "Ora Mini",
+        "Frijj",
+        "AI Studio",
+        "Sami"
+      ],
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/ORA",
+        "environment": {
+          "activationCommand": "source .venv/bin/activate"
+        },
+        "command": "python app.py",
+        "isRunning": false
+      }
     },
     {
       "id": "2",
@@ -19,7 +37,23 @@
       "requiresCheckout": true,
       "maxCheckouts": 1,
       "category": "media",
-      "tags": ["design", "media", "pdf", "proofreader", "neo", "brochures"]
+      "port": "",
+      "tags": [
+        "design",
+        "media",
+        "pdf",
+        "proofreader",
+        "neo",
+        "brochures"
+      ],
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/Neo",
+        "environment": {
+          "activationCommand": "conda activate neo-env"
+        },
+        "command": "npm start",
+        "isRunning": false
+      }
     },
     {
       "id": "3",
@@ -30,18 +64,49 @@
       "requiresCheckout": true,
       "maxCheckouts": 1,
       "category": "developer-agents",
-      "tags": ["editor", "development", "bolt", "ai", "code", "builder", "AI Agent"]
+      "port": "",
+      "tags": [
+        "editor",
+        "development",
+        "bolt",
+        "ai",
+        "code",
+        "builder",
+        "AI Agent"
+      ],
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/Bolt",
+        "environment": {
+          "activationCommand": ""
+        },
+        "command": "npm run dev",
+        "isRunning": false,
+        "error": null
+      }
     },
     {
       "id": "4",
       "name": "Luxson Project Maker",
       "description": "New Project Setup Tool",
       "url": "files/LuxsonTemplateProjectMaker.bat",
-      "logoPath": "images/luxson_project_maker.png",
+      "logoPath": "images/luxson_project_maker.jpg",
       "type": "download",
       "requiresCheckout": false,
       "category": "project-management",
-      "tags": ["project-management", "project setup", "luxson project maker"]
+      "port": "",
+      "tags": [
+        "project-management",
+        "project setup",
+        "luxson project maker"
+      ],
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/LuxsonTemplateProjectMaker",
+        "environment": {
+          "activationCommand": ""
+        },
+        "command": "node index.js",
+        "isRunning": false
+      }
     },
     {
       "id": "5",
@@ -52,18 +117,51 @@
       "requiresCheckout": true,
       "maxCheckouts": 2,
       "category": "media",
-      "tags": ["media", "image", "video", "audio", "3d", "comfyui"]
+      "port": "",
+      "tags": [
+        "media",
+        "image",
+        "video",
+        "audio",
+        "3d",
+        "comfyui"
+      ],
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/ComfyUI",
+        "environment": {
+          "activationCommand": "source .venv/bin/activate"
+        },
+        "command": "python main.py",
+        "isRunning": false
+      }
     },
     {
       "id": "6",
-      "name": "STS Mania",
+      "name": "Sesame CSM",
       "description": "AI Voice Generator, TTS, STT, and more",
       "url": "https://sts.luxson.uk",
       "logoPath": "images/ai-sts.jpg",
       "requiresCheckout": true,
       "maxCheckouts": 2,
       "category": "audio",
-      "tags": ["sts", "audio", "tts", "stt", "voice", "generator"]
+      "port": "1885",
+      "tags": [
+        "sts",
+        "audio",
+        "tts",
+        "stt",
+        "voice",
+        "generator"
+      ],
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/csm",
+        "environment": {
+          "activationCommand": "source .venv/bin/activate"
+        },
+        "command": "start.sh",
+        "isRunning": false,
+        "error": null
+      }
     },
     {
       "id": "7",
@@ -72,8 +170,26 @@
       "url": "http://192.168.24.6:5500/",
       "logoPath": "images/command-line.png",
       "requiresCheckout": false,
-      "category": "scripting",
-      "tags": ["ai", "gui", "interface", "scripts", "tools", "ora", "ai prompt generator"]
+      "category": "hub",
+      "port": "5500",
+      "tags": [
+        "ai",
+        "gui",
+        "interface",
+        "scripts",
+        "tools",
+        "ora",
+        "ai prompt generator"
+      ],
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/OraPromptGen",
+        "environment": {
+          "activationCommand": ""
+        },
+        "command": "npm start",
+        "isRunning": false,
+        "error": null
+      }
     },
     {
       "id": "8",
@@ -84,7 +200,23 @@
       "requiresCheckout": true,
       "maxCheckouts": 1,
       "category": "media",
-      "tags": ["flux", "lora", "training", "inference", "models", "comfyui"]
+      "port": "",
+      "tags": [
+        "flux",
+        "lora",
+        "training",
+        "inference",
+        "models",
+        "comfyui"
+      ],
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/FluxGym",
+        "environment": {
+          "activationCommand": "conda activate flux-env"
+        },
+        "command": "python train.py",
+        "isRunning": false
+      }
     }
   ]
-} 
+}

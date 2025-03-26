@@ -1,10 +1,9 @@
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { useTools } from '../../context/ToolContext';
+import { useTools } from '../../hooks/useTools';
 import ToolCard from './ToolCard';
-import CheckoutModal from '../Modals/CheckoutModal';
-import MaxUsageModal from '../Modals/MaxUsageModal';
 import { AnimatePresence } from 'framer-motion';
+import AddAppModal from '../Modals/AddAppModal';
 
 const container = {
   hidden: { opacity: 0 },
@@ -18,8 +17,11 @@ const container = {
 
 function ToolGrid() {
   const { filteredTools } = useTools();
-  const [selectedTool, setSelectedTool] = useState(null);
-  const [showMaxUsageModal, setShowMaxUsageModal] = useState(false);
+  const [editingTool, setEditingTool] = useState(null);
+
+  const handleEditClick = (tool) => {
+    setEditingTool(tool);
+  };
 
   return (
     <>
@@ -33,29 +35,19 @@ function ToolGrid() {
           <ToolCard
             key={tool.id}
             tool={tool}
-            onCheckout={() => setSelectedTool(tool)}
+            onEditClick={handleEditClick}
           />
         ))}
       </motion.div>
 
-      <AnimatePresence>
-        {selectedTool && (
-          <CheckoutModal
-            tool={selectedTool}
-            onClose={() => setSelectedTool(null)}
-            onMaxUsage={() => {
-              setSelectedTool(null);
-              setShowMaxUsageModal(true);
-            }}
-          />
-        )}
-
-        {showMaxUsageModal && (
-          <MaxUsageModal
-            onClose={() => setShowMaxUsageModal(false)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Edit Tool Modal */}
+      {editingTool && (
+        <AddAppModal 
+          onClose={() => setEditingTool(null)} 
+          existingTool={editingTool} 
+          isEditing={true}
+        />
+      )}
     </>
   );
 }
