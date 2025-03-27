@@ -4,7 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useNotification } from '../../hooks/useNotification';
 import { useRef, useEffect, useState } from 'react';
 
-function ToolCard({ tool, onEditClick }) {
+function ToolCard({ tool, onEditClick, onDeleteClick }) {
   const { runApp, stopApp } = useTools();
   const { isDarkMode } = useTheme();
   const { showNotification } = useNotification();
@@ -18,6 +18,7 @@ function ToolCard({ tool, onEditClick }) {
   const [buttonState, setButtonState] = useState(isRunning ? 'stop' : 'run');
   const [blobsVisible, setBlobsVisible] = useState(false);
   const [fillPercentage, setFillPercentage] = useState(0);
+  const [rotation, setRotation] = useState(0);
 
   const firstGlowColor = isRunning
     ? (isDarkMode ? 'rgba(74,222,128,0.2)' : 'rgba(74,222,128,0.2)')
@@ -161,6 +162,43 @@ function ToolCard({ tool, onEditClick }) {
     }
   }, [isStarting, isStopping, tool.port, tool.name, showNotification]);
   
+  // Rotation animation for vinyl record when running
+  useEffect(() => {
+    let animationId;
+    
+    if (isRunning) {
+      const animate = () => {
+        setRotation(prev => (prev + 0.2) % 360);
+        animationId = requestAnimationFrame(animate);
+      };
+      
+      animationId = requestAnimationFrame(animate);
+    } else {
+      // Gradually slow down rotation when stopping
+      const slowDown = () => {
+        setRotation(prev => {
+          const newRotation = prev + 0.1;
+          if (newRotation > 360) {
+            return 0;
+          }
+          return newRotation;
+        });
+        
+        if (rotation > 0) {
+          animationId = requestAnimationFrame(slowDown);
+        }
+      };
+      
+      if (rotation > 0) {
+        animationId = requestAnimationFrame(slowDown);
+      }
+    }
+    
+    return () => {
+      cancelAnimationFrame(animationId);
+    };
+  }, [isRunning, rotation]);
+  
   // Helper function to start the app and handle errors
   const startApp = async () => {
     const result = await runApp(tool.id);
@@ -260,19 +298,23 @@ function ToolCard({ tool, onEditClick }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={`
-        relative p-5 rounded-xl border transition-all duration-300
-        h-[260px] flex flex-col justify-between overflow-hidden
+        relative p-4 transition-all duration-300
+        h-[260px] w-[100%] flex flex-col justify-between overflow-hidden
+        rounded-lg border-2
         ${isDarkMode
           ? isRunning 
-            ? 'border-green-300 bg-gradient-to-br from-green-300/10 to-transparent' 
-            : 'border-tool-border bg-tool-light'
+            ? 'border-green-300 bg-neutral-900' 
+            : 'border-[#bccc0f]/20 bg-neutral-900'
           : isRunning
-            ? 'border-green-200 bg-gradient-to-br from-green-50 to-white' 
-            : 'border-black bg-white'
+            ? 'border-green-400 bg-white' 
+            : 'border-[#bccc0f]/40 bg-white'
         }
       `}
       style={{
-        '--card-bg': isDarkMode ? 'rgba(188,204,15,0.03)' : 'rgba(188,204,15,0.015)'
+        '--card-bg': isDarkMode ? 'rgba(188,204,15,0.03)' : 'rgba(188,204,15,0.015)',
+        boxShadow: isRunning 
+          ? `0 0 15px ${isDarkMode ? 'rgba(74,222,128,0.15)' : 'rgba(74,222,128,0.3)'}` 
+          : `0 0 10px ${isDarkMode ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.1)'}`,
       }}
     >
       {/* SVG Filter for Gooey Effect */}
@@ -286,13 +328,99 @@ function ToolCard({ tool, onEditClick }) {
         </defs>
       </svg>
 
-      {/* Edit button in top right corner */}
+      {/* Record sleeve background with subtle texture */}
+      <div className="absolute inset-0 rounded-lg overflow-hidden z-0">
+        <div className="absolute inset-0 rounded-lg" style={{
+          backgroundImage: isDarkMode 
+            ? `linear-gradient(to bottom, 
+                rgba(30, 30, 30, 0.7), 
+                rgba(10, 10, 10, 0.9)
+              ),
+              repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 2px,
+                rgba(50, 50, 50, 0.1) 2px,
+                rgba(50, 50, 50, 0.1) 4px
+              )`
+            : `linear-gradient(to bottom, 
+                rgba(250, 250, 250, 0.8), 
+                rgba(230, 230, 230, 0.9)
+              ),
+              repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 2px,
+                rgba(200, 200, 200, 0.2) 2px,
+                rgba(200, 200, 200, 0.2) 4px
+              )`,
+          borderTop: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+          borderBottom: `1px solid ${isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)'}`,
+        }}></div>
+      </div>
+
+      {/* Vinyl record peeking out from top of sleeve */}
+      <div className="absolute top-0 inset-x-0 h-24 overflow-visible z-20 pointer-events-none">
+        <motion.div 
+          style={{
+            width: '180px',
+            height: '180px',
+            position: 'absolute',
+            top: '-90px',
+            left: '50%',
+            marginLeft: '-90px',
+            backgroundImage: `repeating-radial-gradient(
+              circle at center,
+              rgba(80, 80, 80, 0.6),
+              rgba(80, 80, 80, 0.6) 3px,
+              transparent 3px,
+              transparent 6px
+            )`,
+            rotate: isRunning ? `${rotation}deg` : '0deg',
+            transition: isRunning ? 'none' : 'rotate 0.5s ease-out',
+            border: '4px solid rgba(30, 30, 30, 0.8)',
+            borderRadius: '50%',
+            boxShadow: '0 -5px 15px rgba(0,0,0,0.5)',
+            opacity: 0.3
+          }}
+        >
+          {/* Center hole */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '24px',
+            height: '24px',
+            marginLeft: '-12px',
+            marginTop: '-12px',
+            background: 'black',
+            border: '2px solid #444',
+            borderRadius: '50%'
+          }}></div>
+          
+          {/* Record label area */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '70px',
+            height: '70px',
+            marginLeft: '-35px',
+            marginTop: '-35px',
+            background: 'black',
+            opacity: 0.7,
+            borderRadius: '50%'
+          }}></div>
+        </motion.div>
+      </div>
+
+      {/* Edit button in top left corner */}
       <motion.button
-        className={`absolute top-2 right-2 p-1 rounded-full
+        className={`absolute top-2 left-2 p-1 rounded-full
           ${isDarkMode 
-            ? 'bg-[#bccc0f]/20 hover:bg-[#bccc0f]/30 text-[#bccc0f]' 
+            ? 'hover:bg-[#bccc0f]/30 text-[#bccc0f]' 
             : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-          } z-20`}
+          } z-30`}
         onClick={(e) => {
           e.stopPropagation();
           onEditClick(tool);
@@ -305,9 +433,28 @@ function ToolCard({ tool, onEditClick }) {
         </svg>
       </motion.button>
 
+      {/* Delete button in top right corner */}
+      <motion.button
+        className={`absolute top-2 right-2 p-1 rounded-full
+          ${isDarkMode 
+            ? 'hover:bg-[#bccc0f]/30 text-[#bccc0f]' 
+            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+          } z-30`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDeleteClick(tool);
+        }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+        </svg>
+      </motion.button>
+
       {/* Updated Glow Effect Layer */}
       <div 
-        className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+        className="absolute inset-0 pointer-events-none transition-opacity duration-300 rounded-lg z-10"
         style={{
           opacity: isHovering ? 1 : 0,
           backgroundImage: `radial-gradient(
@@ -320,49 +467,51 @@ function ToolCard({ tool, onEditClick }) {
         }}
       />
 
-      {/* Card Content */}
-      <div className="relative z-10 will-change-transform">
-        <div className="flex flex-col items-center h-[130px]">
+      {/* Card Content - Album Cover Style */}
+      <div className="relative flex flex-col items-center justify-between h-full z-20 pt-4 pb-3">
+        <div className="flex flex-col items-center">
           <motion.img 
             layout="position"
             src={tool.logoPath} 
             alt={tool.name}
-            className="w-12 h-12 object-contain mb-1"
-            whileHover={{ scale: 1.1 }}
-            transition={{ type: "spring", stiffness: 300 }}
+            className="w-14 h-14 object-contain mb-2"
+            style={{
+              filter: isDarkMode ? 'drop-shadow(0 0 2px rgba(255,255,255,0.5))' : 'drop-shadow(0 0 2px rgba(0,0,0,0.5))'
+            }}
           />
           <h3
-            className={`text-lg font-semibold leading-tight mb-1 ${
-              isDarkMode ? 'text-white' : 'text-tool-light-mode-text'
+            className={`text-lg font-semibold leading-tight mb-1 text-center px-2 ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
             }`}
+            style={{
+              textShadow: isDarkMode ? '0 2px 4px rgba(0,0,0,0.5)' : '0 1px 2px rgba(0,0,0,0.1)'
+            }}
           >
             {tool.name}
           </h3>
           <p
-            className={`text-sm text-center line-clamp-2 px-1 leading-snug ${
-              isDarkMode ? 'text-gray-400' : 'text-gray-600'
+            className={`text-xs text-center line-clamp-2 px-3 leading-tight ${
+              isDarkMode ? 'text-gray-300' : 'text-gray-600'
             }`}
           >
             {tool.description}
           </p>
         </div>
 
-        <div className="flex-1 flex flex-col justify-center min-h-[44px] mt-2 mb-4">
-          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            <p className="truncate max-w-full mb-1">
-              <span className="font-semibold">Path:</span> {tool.execution.rootPath}
+        {/* Album info section */}
+        <div className="w-full mt-auto">
+          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} px-2`}>
+            <p className="truncate max-w-full text-[10px]">
+              <span className="font-medium">Path:</span> {tool.execution.rootPath}
             </p>
-            <p className="truncate max-w-full">
-              <span className="font-semibold">Command:</span> {tool.execution.command}
+            <div className="flex items-center text-[10px] mt-1">
+              <span className="font-medium flex-shrink-0">Command:</span> 
+              <span className="truncate ml-1 flex-1">{tool.execution.command}</span>
               {tool.port && (
                 <a
                   href={`http://localhost:${tool.port}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`ml-1 px-2 py-0.5 rounded text-[10px] whitespace-nowrap hover:underline
-                    ${isDarkMode 
-                      ? 'bg-[#bccc0f]/20 text-[#bccc0f] hover:bg-[#bccc0f]/30' 
-                      : 'bg-gray-100 text-black hover:bg-gray-200'}`}
                   onClick={(e) => {
                     // Only allow clicking if the app is running
                     if (!isRunning) {
@@ -370,67 +519,71 @@ function ToolCard({ tool, onEditClick }) {
                       showNotification('App must be running to access the URL', 'warning');
                     }
                   }}
+                  className={`ml-2 px-2 py-0.5 rounded text-[10px] whitespace-nowrap flex-shrink-0
+                    ${isDarkMode 
+                      ? 'bg-[#bccc0f]/20 text-[#bccc0f] hover:bg-[#bccc0f]/30' 
+                      : 'bg-[#bccc0f]/20 text-[#857c00] hover:bg-[#bccc0f]/30'}`}
                 >
                   Port: {tool.port}
                 </a>
               )}
-            </p>
+            </div>
+          </div>
+
+          {/* Action button */}
+          <div className="mt-2 px-2">
+            <motion.button
+              layout="position"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleAction}
+              disabled={isStarting || isStopping}
+              className={`
+                w-full h-[32px] px-4 py-1 rounded-lg relative
+                transition-all duration-200 overflow-hidden
+                ${getButtonStyle()}
+                ${(isStarting || isStopping) ? 'cursor-wait' : ''}
+              `}
+              style={{
+                boxShadow: isDarkMode ? '0 0 8px rgba(188,204,15,0.4)' : '0 0 8px rgba(0,0,0,0.2)'
+              }}
+            >
+              {/* Button text */}
+              <span className="relative z-10">{getButtonText()}</span>
+
+              {/* Yellow fill animation */}
+              {blobsVisible && (
+                <div 
+                  className="absolute inset-0 overflow-hidden z-[1] rounded-lg bg-[#bccc0f] transition-opacity duration-300"
+                  style={{
+                    clipPath: `polygon(
+                      0 100%, 
+                      0 ${100 - fillPercentage}%, 
+                      100% ${100 - fillPercentage}%, 
+                      100% 100%
+                    )`,
+                    opacity: buttonState === 'stop' ? 0 : 1
+                  }}
+                />
+              )}
+            </motion.button>
           </div>
         </div>
-
-        <div className="h-[36px] relative overflow-hidden rounded-lg mx-2 mb-2">
-          {/* The button container */}
-          <motion.button
-            layout="position"
-            whileHover={{ 
-              scale: 1.005,
-              boxShadow: 'none'
-            }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleAction}
-            disabled={isStarting || isStopping}
-            className={`
-              w-full h-full px-4 rounded-lg relative
-              transition-all duration-200 overflow-hidden
-              ${getButtonStyle()}
-              ${(isStarting || isStopping) ? 'cursor-wait' : ''}
-            `}
-          >
-            {/* Button text */}
-            <span className="relative z-10">{getButtonText()}</span>
-
-            {/* Yellow fill animation */}
-            {blobsVisible && (
-              <div 
-                className="absolute inset-0 overflow-hidden z-[1] rounded-lg bg-[#bccc0f] transition-opacity duration-300"
-                style={{
-                  clipPath: `polygon(
-                    0 100%, 
-                    0 ${100 - fillPercentage}%, 
-                    100% ${100 - fillPercentage}%, 
-                    100% 100%
-                  )`,
-                  opacity: buttonState === 'stop' ? 0 : 1
-                }}
-              />
-            )}
-          </motion.button>
-        </div>
-
-        {/* Error message under button */}
-        <AnimatePresence>
-          {runError && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-1"
-            >
-              <p className="text-xs text-red-500 truncate">{runError}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* Error message under button */}
+      <AnimatePresence>
+        {runError && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="absolute bottom-1 left-0 right-0 text-center z-20"
+          >
+            <p className="text-xs text-red-500 truncate px-4">{runError}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
