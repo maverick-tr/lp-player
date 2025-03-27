@@ -2,8 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { useTools } from '../hooks/useTools';
 
 // Use the same base URL as in other files
-const API_BASE_URL = 'http://localhost:3015';
-const WS_BASE_URL = 'ws://localhost:3015';
+const API_BASE_URL = `http://${window.location.hostname}:3015`;
+const WS_BASE_URL = `ws://${window.location.hostname}:3015`;
 
 export const TerminalContext = createContext();
 

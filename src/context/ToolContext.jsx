@@ -4,7 +4,7 @@ import { createContext, useState, useCallback, useRef, useLayoutEffect } from 'r
 import { executeProcess, killProcess, openInBrowser } from '../utils/processExecutor';
 
 // Define the API base URL - adjust this to match your actual server URL
-const API_BASE_URL = 'http://localhost:3015';
+const API_BASE_URL = `http://${window.location.hostname}:3015`;
 
 // Export the context directly
 export const ToolContext = createContext();

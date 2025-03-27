@@ -26,4 +26,5 @@ if ! npx concurrently --version &> /dev/null; then
 fi
 
 echo "Starting servers..."
-npx concurrently "npm run dev" "npm run api" 
+export HOST=0.0.0.0
+npx concurrently "npm run dev -- --host" "npm run api -- --host 0.0.0.0" 

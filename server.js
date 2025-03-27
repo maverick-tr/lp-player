@@ -363,10 +363,10 @@ app.post('/api/tools/stop', async (req, res) => {
 });
 
 // Start the server
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running at http://0.0.0.0:${PORT}`);
   console.log(`Available endpoints:`);
   console.log(`  POST /api/tools/run - Run a tool`);
   console.log(`  POST /api/tools/stop - Stop a tool`);
-  console.log(`  WebSocket server - ws://localhost:${PORT}`);
+  console.log(`  WebSocket server - ws://0.0.0.0:${PORT}`);
 }); 
