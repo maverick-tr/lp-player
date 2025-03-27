@@ -158,6 +158,12 @@ export function TerminalProvider({ children }) {
 
   // Initialize WebSocket when component mounts
   useEffect(() => {
+    // Clear any previously active tool state when page refreshes
+    setActiveToolId(null);
+    setActiveToolName('');
+    setTerminalOutput([]);
+    setIsTerminalOpen(false);
+    
     const ws = initWebSocket();
     
     // Ping the server to check if it's available
