@@ -22,7 +22,7 @@ const AppContent = memo(function AppContent() {
       ${isDarkMode ? 'bg-tool-dark text-white' : 'bg-tool-light-mode-bg text-tool-light-mode-text'}
     `}>
       <Header />
-      {isTerminalOpen && <div className="h-[190px] w-full"></div>}
+      {isTerminalOpen && <div className="h-[140px] w-full"></div>}
       <main className="container mx-auto px-4 py-8">
         <SearchBar />
         <ToolGrid />

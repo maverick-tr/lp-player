@@ -1,12 +1,39 @@
 import { useTheme } from '../../hooks/useTheme';
-import { motion } from 'framer-motion';
+import { motion, useTransform, useMotionValue } from 'framer-motion';
 import ThemeToggle from './ThemeToggle';
-import { useState, memo } from 'react';
+import { useState, memo, useEffect } from 'react';
 import AddAppModal from '../Modals/AddAppModal';
+import { useTools } from '../../hooks/useTools';
 
 const Header = memo(function Header() {
   const { isDarkMode } = useTheme();
+  const { tools } = useTools();
   const [showAddAppModal, setShowAddAppModal] = useState(false);
+  const rotate = useMotionValue(0);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinSpeed, setSpinSpeed] = useState(0);
+
+  // Count how many apps are currently running
+  useEffect(() => {
+    const runningApps = tools.filter(tool => tool.execution?.isRunning).length;
+    
+    if (runningApps > 0) {
+      // Calculate spin speed based on number of running apps
+      // Base speed is 5 seconds per rotation, faster as more apps run
+      // Min rotation time is 1 second when all apps are running (assuming max of 10 apps)
+      const maxApps = 10; // Assume maximum 10 apps for full speed
+      const minDuration = 1; // 1 second for fastest rotation
+      const maxDuration = 5; // 5 seconds for slowest rotation
+      
+      // Calculate duration inversely proportional to number of running apps
+      const duration = maxDuration - ((runningApps / maxApps) * (maxDuration - minDuration));
+      
+      setSpinSpeed(duration);
+      setIsSpinning(true);
+    } else {
+      setIsSpinning(false);
+    }
+  }, [tools]);
 
   return (
     <header className={`
@@ -42,20 +69,26 @@ const Header = memo(function Header() {
               src="/logo.png?v=1.0.0" 
               alt="LPP - Local Project Player" 
               className="h-24 w-auto object-contain"
-              initial={{ scale: 1 }}
-              animate={[
-                // Simplified animation to reduce rendering overhead
-                {
-                  scale: [1, 1.05, 1],
-                  transition: {
-                    duration: 2,
-                    times: [0, 0.5, 1],
-                    repeat: Infinity,
-                    repeatDelay: 3
-                  }
+              initial={{ scale: 1, rotate: 0 }}
+              animate={isSpinning ? {
+                rotate: 360,
+                transition: {
+                  duration: spinSpeed,
+                  ease: "linear",
+                  repeat: Infinity,
+                  repeatType: "loop"
                 }
-              ]}
+              } : {
+                scale: [1, 1.05, 1],
+                transition: {
+                  duration: 2,
+                  times: [0, 0.5, 1],
+                  repeat: Infinity,
+                  repeatDelay: 3
+                }
+              }}
               whileHover={{ scale: 1.05 }}
+              style={{ originX: 0.5, originY: 0.5 }}
             />
           </div>
           
