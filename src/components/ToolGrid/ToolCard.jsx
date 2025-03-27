@@ -99,13 +99,11 @@ function ToolCard({ tool, onEditClick }) {
           
           // Wait a moment and then switch to stop state
           timeouts.push(setTimeout(() => {
-            setButtonState('stop');
+            // Note: We now change the button to "Starting..." but not to "Stop" yet
+            // The actual "Stop" state will be triggered by the tool context
+            // when it detects the app is truly ready
+            setButtonState('waiting');
             setIsStarting(false);
-            
-            // Success notification
-            if (tool.port) {
-              showNotification(`${tool.name} is running on port ${tool.port}`, 'success');
-            }
             
             // Keep the yellow fill for a moment before hiding
             timeouts.push(setTimeout(() => {
@@ -229,6 +227,10 @@ function ToolCard({ tool, onEditClick }) {
       return isDarkMode
         ? 'border border-[#bccc0f] text-[#bccc0f] bg-transparent'
         : 'border border-black text-black bg-transparent';
+    } else if (buttonState === 'waiting') {
+      return isDarkMode
+        ? 'border border-[#bccc0f] text-[#bccc0f] bg-transparent'
+        : 'border border-black text-black bg-transparent';
     } else { // 'run' state
       return isDarkMode
         ? 'border border-[#bccc0f] text-[#bccc0f] bg-transparent hover:bg-[#bccc0f]/10'
@@ -241,6 +243,7 @@ function ToolCard({ tool, onEditClick }) {
     switch (buttonState) {
       case 'stop': return 'Stop';
       case 'starting': return 'Starting...';
+      case 'waiting': return 'Starting...';
       case 'draining': return 'Stopping...';
       default: return 'Run';
     }
@@ -352,9 +355,24 @@ function ToolCard({ tool, onEditClick }) {
             <p className="truncate max-w-full">
               <span className="font-semibold">Command:</span> {tool.execution.command}
               {tool.port && (
-                <span className="ml-1 px-1 py-0.5 bg-gray-700/30 rounded text-[10px] whitespace-nowrap">
+                <a
+                  href={`http://localhost:${tool.port}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`ml-1 px-2 py-0.5 rounded text-[10px] whitespace-nowrap hover:underline
+                    ${isDarkMode 
+                      ? 'bg-[#bccc0f]/20 text-[#bccc0f] hover:bg-[#bccc0f]/30' 
+                      : 'bg-gray-100 text-black hover:bg-gray-200'}`}
+                  onClick={(e) => {
+                    // Only allow clicking if the app is running
+                    if (!isRunning) {
+                      e.preventDefault();
+                      showNotification('App must be running to access the URL', 'warning');
+                    }
+                  }}
+                >
                   Port: {tool.port}
-                </span>
+                </a>
               )}
             </p>
           </div>

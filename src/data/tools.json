@@ -117,7 +117,7 @@
       "requiresCheckout": true,
       "maxCheckouts": 2,
       "category": "media",
-      "port": "",
+      "port": "1886",
       "tags": [
         "media",
         "image",
@@ -132,7 +132,8 @@
           "activationCommand": "source .venv/bin/activate"
         },
         "command": "python main.py",
-        "isRunning": false
+        "isRunning": false,
+        "error": null
       }
     },
     {

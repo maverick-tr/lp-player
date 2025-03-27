@@ -1,0 +1,208 @@
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '../../hooks/useTheme';
+import { useTools } from '../../hooks/useTools';
+
+const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
+  const { isDarkMode } = useTheme();
+  const { tools } = useTools();
+  const terminalRef = useRef(null);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [autoCloseCountdown, setAutoCloseCountdown] = useState(null);
+  const wasRunningRef = useRef(false);
+  const intervalRef = useRef(null);
+
+  // Auto-scroll to bottom when output changes
+  useEffect(() => {
+    if (terminalRef.current && !isMinimized) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [output, isMinimized]);
+  
+  // Check if any tool is running
+  const isAnyToolRunning = tools.some(tool => tool.execution.isRunning);
+  
+  // Set up a recurring check for app state
+  useEffect(() => {
+    // Set up interval to check state every 500ms
+    intervalRef.current = setInterval(() => {
+      const isRunning = tools.some(tool => tool.execution.isRunning);
+      
+      // App was running before, but now stopped
+      if (wasRunningRef.current && !isRunning && isOpen && output.length > 0) {
+        console.log('App stopped detected in interval');
+        wasRunningRef.current = false;
+        
+        // Start countdown if not already started
+        if (autoCloseCountdown === null) {
+          setAutoCloseCountdown(5);
+        }
+      } 
+      // App is running
+      else if (isRunning) {
+        wasRunningRef.current = true;
+        setAutoCloseCountdown(null);
+      }
+    }, 500);
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isOpen, output.length, tools, autoCloseCountdown]);
+  
+  // Also check on direct state changes to catch immediate transitions
+  useEffect(() => {
+    // If terminal not open, don't do anything
+    if (!isOpen) return;
+    
+    // App is running
+    if (isAnyToolRunning) {
+      console.log('App is running, updating ref');
+      wasRunningRef.current = true;
+      setAutoCloseCountdown(null);
+    } 
+    // App stopped and has output - possibly start countdown
+    else if (!isAnyToolRunning && wasRunningRef.current && output.length > 0) {
+      console.log('App stopped running, may start countdown');
+      wasRunningRef.current = false;
+      
+      if (autoCloseCountdown === null) {
+        setAutoCloseCountdown(5);
+      }
+    }
+  }, [isOpen, isAnyToolRunning, output.length, autoCloseCountdown]);
+  
+  // Handle the actual countdown timer
+  useEffect(() => {
+    if (autoCloseCountdown === null) return;
+    
+    console.log(`Countdown: ${autoCloseCountdown}`);
+    
+    // Close when countdown reaches 0
+    if (autoCloseCountdown <= 0) {
+      console.log('Closing terminal');
+      onClose();
+      return;
+    }
+    
+    // Decrement every second
+    const timer = setTimeout(() => {
+      setAutoCloseCountdown(prev => prev - 1);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [autoCloseCountdown, onClose]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ 
+            y: 0, 
+            height: isMinimized ? '36px' : '140px',
+            opacity: 1 
+          }}
+          exit={{ y: -100, opacity: 0 }}
+          transition={{ type: 'spring', damping: 22, stiffness: 180 }}
+          className={`fixed top-[140px] left-0 right-0 z-40 mx-auto max-w-3xl 
+                     ${isDarkMode ? 'bg-tool-dark' : 'bg-gray-100'}
+                     border border-[#bccc0f] rounded-xl shadow-xl overflow-hidden
+                     mb-8`}
+        >
+          {/* Terminal header */}
+          <div 
+            className={`flex justify-between items-center px-4 py-1.5
+                      ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-gray-200'} 
+                      border-b border-[#bccc0f]/50 cursor-pointer
+                      rounded-t-xl`}
+            onClick={() => setIsMinimized(!isMinimized)}
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              </div>
+              <h3 className={`font-mono text-sm ${isDarkMode ? 'text-[#bccc0f]' : 'text-gray-800'}`}>
+                {toolName ? `${toolName} - Process Output` : 'Terminal Output'}
+              </h3>
+              {/* Connection status indicator */}
+              <div className="ml-2 flex items-center">
+                <div className={`w-2 h-2 rounded-full mr-1 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              {autoCloseCountdown !== null && (
+                <div className="ml-2 text-xs text-yellow-500 font-bold">
+                  Auto-closing in {autoCloseCountdown}s...
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMinimized(!isMinimized);
+                }}
+                className={`p-1 rounded hover:bg-opacity-80 text-xs
+                           ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-300 text-gray-600'}`}
+                title={isMinimized ? "Expand" : "Collapse"}
+              >
+                {isMinimized ? '▽' : '△'}
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }}
+                className={`p-1 rounded hover:bg-opacity-80 text-xs
+                           ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-300 text-gray-600'}`}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          
+          {/* Terminal content */}
+          <div 
+            ref={terminalRef}
+            className={`h-full overflow-auto font-mono text-xs p-2.5 whitespace-pre-wrap
+                       ${isDarkMode ? 'bg-black text-green-300' : 'bg-gray-900 text-green-400'}
+                       rounded-b-xl`}
+          >
+            {!isConnected && (
+              <div className="text-red-400 mb-2 p-1 border border-red-400 rounded bg-red-900 bg-opacity-30">
+                ⚠️ WebSocket disconnected. Attempting to reconnect...
+              </div>
+            )}
+            
+            {output.length > 0 ? (
+              output.map((line, index) => (
+                <div key={index} 
+                     className="mb-1"
+                     dangerouslySetInnerHTML={{
+                       __html: line.includes('<span') 
+                         ? line 
+                         : line.includes('Error:') 
+                           ? `<span class="text-red-400">${line}</span>` 
+                           : (line.startsWith('$') 
+                              ? `<span class="text-[#bccc0f]">${line}</span>` 
+                              : `<span class="text-[#bccc0f] mr-2">$</span>${line}`)
+                     }} 
+                />
+              ))
+            ) : (
+              <div className="text-gray-500 italic">Waiting for process output...</div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default TerminalWindow; 

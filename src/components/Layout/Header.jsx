@@ -39,8 +39,8 @@ const Header = memo(function Header() {
           {/* Centered Logo */}
           <div className="flex justify-center flex-1">
             <motion.img 
-              src="/images/luxson-logo.png" 
-              alt="LAP - Local App Manager" 
+              src="/logo.png?v=1.0.0" 
+              alt="LPP - Local Project Player" 
               className="h-24 w-auto object-contain"
               initial={{ scale: 1 }}
               animate={[

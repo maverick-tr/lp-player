@@ -28,7 +28,7 @@ const Footer = memo(function Footer() {
           text-xs font-medium
           ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}
         `}>
-          LAP - Local App Manager © 2025
+          LPP - Local Project Player © 2025
         </span>
         <SystemMonitor name="Memory" type="memory" />
       </div>

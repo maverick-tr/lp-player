@@ -1,6 +1,10 @@
 import { createContext, useState, useCallback, useRef, useLayoutEffect } from 'react';
 // Remove this import to prevent double loading
 // import toolsData from '../data/tools.json';
+import { executeProcess, killProcess, openInBrowser } from '../utils/processExecutor';
+
+// Define the API base URL - adjust this to match your actual server URL
+const API_BASE_URL = 'http://localhost:3015';
 
 // Export the context directly
 export const ToolContext = createContext();
@@ -59,7 +63,7 @@ export function ToolProvider({ children }) {
         }
         
         // Regardless of initial source, always try to get fresh data from API
-        const response = await fetch('/api/tools').catch(err => {
+        const response = await fetch(`${API_BASE_URL}/api/tools`).catch(err => {
           console.warn('API server not available:', err.message);
           return null;
         });
@@ -139,7 +143,7 @@ export function ToolProvider({ children }) {
       
       // Save to server's tools.json via API
       try {
-        const response = await fetch('/api/tools', {
+        const response = await fetch(`${API_BASE_URL}/api/tools`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -195,6 +199,64 @@ export function ToolProvider({ children }) {
       globalToolsCache = updatedTools;
       
       await persistTools(updatedTools);
+      
+      // Trigger terminal window opening for this toolId
+      // We'll publish a custom event that the TerminalContext will listen for
+      const terminalEvent = new CustomEvent('open-terminal', { detail: { toolId } });
+      window.dispatchEvent(terminalEvent);
+      
+      // Actually execute the command
+      try {
+        await executeProcess(
+          toolId,
+          tool.execution.rootPath,
+          tool.execution.command,
+          tool.execution.environment.activationCommand
+        );
+        
+        // Remove automatic URL opening
+        // The port will be clickable in the UI instead
+      } catch (execError) {
+        console.error('Failed to execute process:', execError);
+        
+        // Update the tool with the error
+        const erroredTools = tools.map(t => 
+          t.id === toolId 
+            ? { 
+                ...t, 
+                execution: { 
+                  ...t.execution, 
+                  isRunning: false, 
+                  error: execError.message || 'Failed to run app' 
+                } 
+              } 
+            : t
+        );
+        
+        setTools(erroredTools);
+        setFilteredTools(prev => 
+          prev.map(t => 
+            t.id === toolId 
+              ? { 
+                  ...t, 
+                  execution: { 
+                    ...t.execution, 
+                    isRunning: false, 
+                    error: execError.message || 'Failed to run app' 
+                  } 
+                } 
+              : t
+          )
+        );
+        
+        // Update global cache
+        globalToolsCache = erroredTools;
+        
+        await persistTools(erroredTools);
+        
+        throw execError;
+      }
+      
       return { success: true };
     } catch (error) {
       console.error('Failed to run app:', error);
@@ -242,6 +304,9 @@ export function ToolProvider({ children }) {
 
   const stopApp = async (toolId) => {
     try {
+      // Kill the process first
+      await killProcess(toolId);
+      
       const updatedTools = tools.map(tool => 
         tool.id === toolId 
           ? { ...tool, execution: { ...tool.execution, isRunning: false } } 
