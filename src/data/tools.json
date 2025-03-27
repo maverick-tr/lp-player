@@ -25,7 +25,8 @@
           "activationCommand": "source .venv/bin/activate"
         },
         "command": "python app.py",
-        "isRunning": false
+        "isRunning": false,
+        "error": null
       }
     },
     {

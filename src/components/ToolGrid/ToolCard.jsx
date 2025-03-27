@@ -369,19 +369,31 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             top: '-90px',
             left: '50%',
             marginLeft: '-90px',
-            backgroundImage: `repeating-radial-gradient(
-              circle at center,
-              rgba(80, 80, 80, 0.6),
-              rgba(80, 80, 80, 0.6) 3px,
-              transparent 3px,
-              transparent 6px
-            )`,
+            backgroundImage: isDarkMode 
+              ? `repeating-radial-gradient(
+                  circle at center,
+                  rgba(80, 80, 80, 0.6),
+                  rgba(80, 80, 80, 0.6) 3px,
+                  transparent 3px,
+                  transparent 6px
+                )`
+              : `repeating-radial-gradient(
+                  circle at center,
+                  rgba(180, 180, 180, 0.3),
+                  rgba(180, 180, 180, 0.3) 3px,
+                  transparent 3px,
+                  transparent 6px
+                )`,
             rotate: isRunning ? `${rotation}deg` : '0deg',
             transition: isRunning ? 'none' : 'rotate 0.5s ease-out',
-            border: '4px solid rgba(30, 30, 30, 0.8)',
+            border: isDarkMode 
+              ? '4px solid rgba(30, 30, 30, 0.8)' 
+              : '4px solid rgba(180, 180, 180, 0.3)',
             borderRadius: '50%',
-            boxShadow: '0 -5px 15px rgba(0,0,0,0.5)',
-            opacity: 0.3
+            boxShadow: isDarkMode 
+              ? '0 -5px 15px rgba(0,0,0,0.5)' 
+              : '0 -5px 15px rgba(0,0,0,0.1)',
+            opacity: isDarkMode ? 0.3 : 0.25
           }}
         >
           {/* Center hole */}
@@ -407,8 +419,8 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             height: '70px',
             marginLeft: '-35px',
             marginTop: '-35px',
-            background: 'black',
-            opacity: 0.7,
+            background: isDarkMode ? 'black' : '#555',
+            opacity: isDarkMode ? 0.7 : 0.4,
             borderRadius: '50%'
           }}></div>
         </motion.div>
