@@ -259,32 +259,155 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
   const getButtonStyle = () => {
     if (buttonState === 'stop') {
       return isDarkMode
-        ? 'bg-red-600 text-white hover:bg-red-700'
-        : 'bg-red-500 text-white hover:bg-red-600';
-    } else if (buttonState === 'starting' || buttonState === 'draining') {
+        ? 'bg-transparent' 
+        : 'bg-transparent';
+    } else if (buttonState === 'starting' || buttonState === 'draining' || buttonState === 'waiting') {
       return isDarkMode
-        ? 'border border-[#bccc0f] text-[#bccc0f] bg-transparent'
-        : 'border border-black text-black bg-transparent';
-    } else if (buttonState === 'waiting') {
+        ? 'bg-transparent opacity-75' 
+        : 'bg-transparent opacity-75';
+    } else {
       return isDarkMode
-        ? 'border border-[#bccc0f] text-[#bccc0f] bg-transparent'
-        : 'border border-black text-black bg-transparent';
-    } else { // 'run' state
-      return isDarkMode
-        ? 'border border-[#bccc0f] text-[#bccc0f] bg-transparent hover:bg-[#bccc0f]/10'
-        : 'border border-black text-black bg-transparent hover:bg-[#bccc0f]/10';
+        ? 'bg-transparent' 
+        : 'bg-transparent';
     }
   };
-  
-  // Get the button text based on current state
-  const getButtonText = () => {
-    switch (buttonState) {
-      case 'stop': return 'Stop';
-      case 'starting': return 'Starting...';
-      case 'waiting': return 'Starting...';
-      case 'draining': return 'Stopping...';
-      default: return 'Run';
-    }
+
+  // Get the button content based on current state
+  const getButtonContent = () => {    
+    return (
+      <div className="relative flex items-center w-full justify-center">
+        {/* Control panel with vinyl disc */}
+        <div className="h-8 w-[68px] relative flex-shrink-0">
+          {/* Dark control panel background */}
+          <div className="absolute inset-0 rounded-md bg-[#1a1a1a] border border-[#333] overflow-hidden">
+            {/* Subtle panel texture */}
+            <div className="absolute inset-0 opacity-10"
+              style={{
+                backgroundImage: `
+                  repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(255,255,255,0.05) 2px,
+                    rgba(255,255,255,0.05) 4px
+                  )
+                `
+              }}
+            ></div>
+            
+            {/* Status LED dot */}
+            <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full overflow-hidden">
+              <div 
+                className={`absolute inset-0 rounded-full transition-all duration-300
+                  ${isRunning 
+                    ? 'bg-[#bccc0f] opacity-100 shadow-[0_0_5px_rgba(188,204,15,0.7)]' 
+                    : 'bg-neutral-600 opacity-60'
+                  }
+                `}
+              ></div>
+            </div>
+            
+            {/* ON/OFF text */}
+            <div className="absolute top-2 right-2 text-[7px] font-bold font-mono">
+              <span className={isRunning ? 'text-[#bccc0f]' : 'text-[#bccc0f]'}>
+                {isRunning ? 'ON' : 'OFF'}
+              </span>
+            </div>
+          </div>
+          
+          {/* Vinyl disc */}
+          <motion.div 
+            className="absolute top-1/2 left-[8px] -translate-y-1/2 w-6 h-6 z-10"
+            animate={{ 
+              x: isRunning ? 22 : 0
+            }}
+            transition={{
+              x: { 
+                type: "spring", 
+                stiffness: 300, 
+                damping: 25
+              }
+            }}
+          >
+            {/* Vinyl disc with grooves */}
+            <motion.div 
+              className="absolute inset-0 rounded-full bg-[#222] overflow-hidden shadow-md"
+              animate={{ 
+                rotate: isRunning ? 360 : 0
+              }}
+              transition={{
+                rotate: {
+                  duration: isRunning ? 3 : 0.5,
+                  ease: isRunning ? "linear" : "easeOut",
+                  repeat: isRunning ? Infinity : 0,
+                  repeatType: "loop"
+                }
+              }}
+            >
+              {/* Grooves */}
+              <div 
+                className="absolute inset-0 rounded-full opacity-80"
+                style={{
+                  backgroundImage: `
+                    repeating-radial-gradient(
+                      circle at center,
+                      #222 0px,
+                      #222 1px,
+                      #333 1px,
+                      #333 2px
+                    )
+                  `
+                }}
+              ></div>
+              
+              {/* Center hole */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-black"></div>
+              
+              {/* Label */}
+              <div 
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
+                style={{
+                  background: isRunning 
+                    ? 'radial-gradient(circle at 30% 30%, #bccc0f, #9aa50a)' 
+                    : 'radial-gradient(circle at 30% 30%, #999, #666)',
+                  boxShadow: isRunning ? '0 0 5px rgba(188,204,15,0.7)' : 'none'
+                }}
+              >
+                {/* Label detail */}
+                <div className="absolute inset-0 rounded-full flex items-center justify-center">
+                  <div 
+                    className={`w-1 h-[1px] ${isRunning ? 'bg-yellow-200' : 'bg-gray-300'} opacity-80`}
+                    style={{ transform: 'rotate(45deg)' }}
+                  ></div>
+                  <div 
+                    className={`w-1 h-[1px] ${isRunning ? 'bg-yellow-200' : 'bg-gray-300'} opacity-80`} 
+                    style={{ transform: 'rotate(-45deg)' }}
+                  ></div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+        
+        {/* Status text (only shown during transitions) */}
+        {(buttonState === 'starting' || buttonState === 'draining' || buttonState === 'waiting') && (
+          <div className="absolute right-4 flex items-center">
+            <motion.span 
+              className={`text-sm font-medium ${
+                isDarkMode 
+                  ? 'text-[#bccc0f]'
+                  : 'text-gray-700'
+              }`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0.5, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            >
+              {buttonState === 'draining' ? 'Stopping...' : 'Starting...'}
+            </motion.span>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -303,17 +426,17 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
         rounded-lg border-2
         ${isDarkMode
           ? isRunning 
-            ? 'border-green-300 bg-neutral-900' 
+            ? 'border-[#bccc0f]/80 bg-neutral-900' 
             : 'border-[#bccc0f]/20 bg-neutral-900'
           : isRunning
-            ? 'border-green-400 bg-white' 
+            ? 'border-[#bccc0f]/80 bg-white' 
             : 'border-[#bccc0f]/40 bg-white'
         }
       `}
       style={{
         '--card-bg': isDarkMode ? 'rgba(188,204,15,0.03)' : 'rgba(188,204,15,0.015)',
         boxShadow: isRunning 
-          ? `0 0 15px ${isDarkMode ? 'rgba(74,222,128,0.15)' : 'rgba(74,222,128,0.3)'}` 
+          ? `0 0 15px ${isDarkMode ? 'rgba(188,204,15,0.3)' : 'rgba(188,204,15,0.5)'}` 
           : `0 0 10px ${isDarkMode ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.1)'}`,
       }}
     >
@@ -360,8 +483,24 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
       </div>
 
       {/* Vinyl record peeking out from top of sleeve */}
-      <div className="absolute top-0 inset-x-0 h-24 overflow-visible z-20 pointer-events-none">
         <motion.div 
+        className="absolute top-0 inset-x-0 h-24 overflow-visible z-20 pointer-events-none"
+        animate={{
+          y: isRunning ? -180 : 0,
+          opacity: isRunning ? 0 : 1
+        }}
+        transition={{
+          y: { 
+            duration: 2.5, 
+            ease: "easeInOut" 
+          },
+          opacity: { 
+            duration: 0.8, 
+            delay: isRunning ? 1.5 : 0 
+          }
+        }}
+      >
+        <div 
           style={{
             width: '180px',
             height: '180px',
@@ -423,8 +562,8 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             opacity: isDarkMode ? 0.7 : 0.4,
             borderRadius: '50%'
           }}></div>
+        </div>
         </motion.div>
-      </div>
 
       {/* Edit button in top left corner */}
       <motion.button
@@ -551,33 +690,16 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
               onClick={handleAction}
               disabled={isStarting || isStopping}
               className={`
-                w-full h-[32px] px-4 py-1 rounded-lg relative
-                transition-all duration-200 overflow-hidden
+                w-full h-[40px] px-4 rounded-lg relative
+                transition-all duration-200
                 ${getButtonStyle()}
-                ${(isStarting || isStopping) ? 'cursor-wait' : ''}
+                ${(isStarting || isStopping) ? 'cursor-wait' : 'cursor-pointer'}
               `}
               style={{
-                boxShadow: isDarkMode ? '0 0 8px rgba(188,204,15,0.4)' : '0 0 8px rgba(0,0,0,0.2)'
+                boxShadow: isDarkMode ? '0 0 8px rgba(188,204,15,0.2)' : '0 0 8px rgba(0,0,0,0.1)'
               }}
             >
-              {/* Button text */}
-              <span className="relative z-10">{getButtonText()}</span>
-
-              {/* Yellow fill animation */}
-              {blobsVisible && (
-                <div 
-                  className="absolute inset-0 overflow-hidden z-[1] rounded-lg bg-[#bccc0f] transition-opacity duration-300"
-                  style={{
-                    clipPath: `polygon(
-                      0 100%, 
-                      0 ${100 - fillPercentage}%, 
-                      100% ${100 - fillPercentage}%, 
-                      100% 100%
-                    )`,
-                    opacity: buttonState === 'stop' ? 0 : 1
-                  }}
-                />
-              )}
+              {getButtonContent()}
             </motion.button>
           </div>
         </div>

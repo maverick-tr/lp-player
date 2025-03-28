@@ -53,7 +53,8 @@
           "activationCommand": "conda activate neo-env"
         },
         "command": "npm start",
-        "isRunning": false
+        "isRunning": false,
+        "error": null
       }
     },
     {
@@ -106,7 +107,8 @@
           "activationCommand": ""
         },
         "command": "node index.js",
-        "isRunning": false
+        "isRunning": false,
+        "error": null
       }
     },
     {
