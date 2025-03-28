@@ -279,7 +279,9 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
         {/* Control panel with vinyl disc */}
         <div className="h-8 w-[68px] relative flex-shrink-0">
           {/* Dark control panel background */}
-          <div className="absolute inset-0 rounded-md bg-[#1a1a1a] border border-[#333] overflow-hidden">
+          <div className={`absolute inset-0 rounded-md border overflow-hidden ${
+            isDarkMode ? 'bg-[#1a1a1a] border-[#333]' : 'bg-[#e0e0e0] border-[#ccc]'
+          }`}>
             {/* Subtle panel texture */}
             <div className="absolute inset-0 opacity-10"
               style={{
@@ -288,8 +290,8 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
                     90deg,
                     transparent,
                     transparent 2px,
-                    rgba(255,255,255,0.05) 2px,
-                    rgba(255,255,255,0.05) 4px
+                    ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 2px,
+                    ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 4px
                   )
                 `
               }}
@@ -309,7 +311,7 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             
             {/* ON/OFF text */}
             <div className="absolute top-2 right-2 text-[7px] font-bold font-mono">
-              <span className={isRunning ? 'text-[#bccc0f]' : 'text-[#bccc0f]'}>
+              <span className={`${isRunning ? 'text-[#bccc0f]' : isDarkMode ? 'text-[#bccc0f]' : 'text-[#666]'}`}>
                 {isRunning ? 'ON' : 'OFF'}
               </span>
             </div>
@@ -331,7 +333,9 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
           >
             {/* Vinyl disc with grooves */}
             <motion.div 
-              className="absolute inset-0 rounded-full bg-[#222] overflow-hidden shadow-md"
+              className={`absolute inset-0 rounded-full overflow-hidden shadow-md ${
+                isDarkMode ? 'bg-[#222]' : 'bg-[#555]'
+              }`}
               animate={{ 
                 rotate: isRunning ? 360 : 0
               }}
@@ -351,10 +355,10 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
                   backgroundImage: `
                     repeating-radial-gradient(
                       circle at center,
-                      #222 0px,
-                      #222 1px,
-                      #333 1px,
-                      #333 2px
+                      ${isDarkMode ? '#222' : '#555'} 0px,
+                      ${isDarkMode ? '#222' : '#555'} 1px,
+                      ${isDarkMode ? '#333' : '#777'} 1px,
+                      ${isDarkMode ? '#333' : '#777'} 2px
                     )
                   `
                 }}
@@ -423,13 +427,13 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
       className={`
         relative p-4 transition-all duration-300
         h-[260px] w-[100%] flex flex-col justify-between overflow-hidden
-        rounded-lg border-2
+        rounded-lg ${isRunning ? 'border' : 'border-2'}
         ${isDarkMode
           ? isRunning 
-            ? 'border-[#bccc0f]/80 bg-neutral-900' 
+            ? 'border-[#bccc0f]/80 bg-black' 
             : 'border-[#bccc0f]/20 bg-neutral-900'
           : isRunning
-            ? 'border-[#bccc0f]/80 bg-white' 
+            ? 'border-[#bccc0f]/80 bg-gray-50' 
             : 'border-[#bccc0f]/40 bg-white'
         }
       `}

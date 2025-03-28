@@ -66,7 +66,7 @@
       "requiresCheckout": true,
       "maxCheckouts": 1,
       "category": "developer-agents",
-      "port": "",
+      "port": "5173",
       "tags": [
         "editor",
         "development",
@@ -77,12 +77,12 @@
         "AI Agent"
       ],
       "execution": {
-        "rootPath": "/Users/st/Documents/Projects/Bolt",
+        "rootPath": "/Users/st/Documents/Projects/bolt.new-any-llm",
         "environment": {
           "activationCommand": ""
         },
-        "command": "npm run dev",
-        "isRunning": true,
+        "command": "pnpm run dev",
+        "isRunning": false,
         "error": null
       }
     },
