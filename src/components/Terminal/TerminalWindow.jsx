@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../../hooks/useTheme';
 import { useTools } from '../../hooks/useTools';
+import { useTerminal } from '../../hooks/useTerminal';
 
 // Smoke effect styles
 const smokeStyles = `
@@ -30,14 +31,57 @@ const smokeStyles = `
 const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
   const { isDarkMode } = useTheme();
   const { tools } = useTools();
+  const { toggleTerminalSize, isTerminalMinimized, openTerminalForTool } = useTerminal();
   const terminalRef = useRef(null);
   const terminaElRef = useRef(null);
-  const [isMinimized, setIsMinimized] = useState(false);
+  // Use the context's state for minimized
+  const [isMinimized, setIsMinimized] = useState(isTerminalMinimized);
   const [autoCloseCountdown, setAutoCloseCountdown] = useState(null);
   const [isClosing, setIsClosing] = useState(false);
   const wasRunningRef = useRef(false);
   const intervalRef = useRef(null);
   const viewportRef = useRef(null);
+  
+  // Sync local state with context state
+  useEffect(() => {
+    setIsMinimized(isTerminalMinimized);
+  }, [isTerminalMinimized]);
+  
+  // Get active tools (running processes)
+  const activeTools = tools.filter(tool => tool.execution.isRunning);
+  const [activeToolTab, setActiveToolTab] = useState(toolName);
+
+  // Update active tool tab when toolName prop changes
+  useEffect(() => {
+    if (toolName) {
+      setActiveToolTab(toolName);
+    }
+  }, [toolName]);
+
+  // Handle tab change
+  const handleTabChange = (selectedToolName) => {
+    // Don't do anything if already on this tab
+    if (selectedToolName === activeToolTab) return;
+    
+    setActiveToolTab(selectedToolName);
+    
+    // Find the tool by name to get its ID
+    const selectedTool = tools.find(tool => tool.name === selectedToolName);
+    if (selectedTool) {
+      console.log(`Switching terminal to tool: ${selectedToolName}`);
+      // Pass true to preserve the current minimized/maximized state
+      openTerminalForTool(selectedTool.id, true);
+    }
+  };
+
+  // Set active tool tab when a new tool starts
+  useEffect(() => {
+    if (toolName && activeTools.some(tool => tool.name === toolName)) {
+      setActiveToolTab(toolName);
+    } else if (activeTools.length > 0 && (!activeToolTab || !activeTools.some(tool => tool.name === activeToolTab))) {
+      setActiveToolTab(activeTools[0].name);
+    }
+  }, [toolName, activeTools, activeToolTab]);
 
   // Auto-scroll to bottom when output changes
   useEffect(() => {
@@ -122,6 +166,27 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
     return () => clearTimeout(timer);
   }, [autoCloseCountdown]);
 
+  // Get the latest output line for summary
+  const getOutputSummary = () => {
+    if (output.length === 0) return "Waiting for process output...";
+    
+    // Get the last non-empty line
+    for (let i = output.length - 1; i >= 0; i--) {
+      // Remove HTML tags and normalize special characters
+      const line = output[i]
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/\u001b\[\d+m/g, '') // Remove ANSI color codes
+        .replace(/\s+/g, ' '); // Normalize whitespace
+      
+      if (line.trim()) {
+        // No need for explicit truncation as CSS handles it
+        return line.trim();
+      }
+    }
+    
+    return output[output.length - 1].replace(/<[^>]*>/g, '').trim() || "Process running...";
+  };
+
   // Smoke effect function
   const createSmokeEffect = () => {
     if (terminaElRef.current) {
@@ -191,6 +256,12 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
     }, 500);
   };
 
+  // Handle expanding/minimizing the terminal
+  const handleToggleMinimize = (shouldMinimize) => {
+    setIsMinimized(shouldMinimize);
+    toggleTerminalSize(shouldMinimize);
+  };
+
   // Add the smoke styles to the document
   useEffect(() => {
     const styleElement = document.createElement('style');
@@ -213,54 +284,93 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
         {isOpen && (
           <motion.div
             ref={terminaElRef}
-            initial={{ y: -100, opacity: 0 }}
+            initial={{ y: -50, opacity: 0 }}
             animate={{ 
               y: 0, 
               height: isMinimized ? '36px' : '140px',
               opacity: 1 
             }}
-            exit={{ y: -100, opacity: 0 }}
+            exit={{ y: -50, opacity: 0 }}
             transition={{ type: 'spring', damping: 22, stiffness: 180 }}
             className={`fixed top-[140px] left-0 right-0 z-40 mx-auto max-w-3xl 
                      ${isDarkMode ? 'bg-tool-dark' : 'bg-gray-100'}
-                     border border-[#bccc0f] rounded-xl shadow-xl overflow-hidden
-                     mb-0`}
+                     border border-[#bccc0f] shadow-xl overflow-hidden
+                     ${isMinimized ? 'rounded-xl' : 'rounded-xl'}`}
           >
-            {/* Terminal header */}
+            {/* Terminal header/tabbed view*/}
             <div 
-              className={`flex justify-between items-center px-4 py-1.5
+              className={`flex justify-between items-center px-3 py-1.5
                       ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-gray-200'} 
-                      border-b border-[#bccc0f]/50 cursor-pointer
-                      rounded-t-xl`}
-              onClick={() => setIsMinimized(!isMinimized)}
+                      border-b ${!isMinimized ? 'border-[#bccc0f]/50' : 'border-transparent'} cursor-pointer
+                      rounded-t-xl ${isMinimized ? 'rounded-b-xl' : ''}`}
             >
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                </div>
-                <h3 className={`font-mono text-sm ${isDarkMode ? 'text-[#bccc0f]' : 'text-gray-800'}`}>
-                  {toolName ? `${toolName} - Process Output` : 'Terminal Output'}
-                </h3>
+              {/* Left side: Name and tabs */}
+              <div className="flex items-center gap-1 overflow-hidden flex-grow max-w-[calc(100%-80px)]">
+                {/* Show tabs whenever multiple tools are running (both minimized and maximized) */}
+                {activeTools.length > 0 ? (
+                  <div className="flex space-x-0.5 flex-shrink-0">
+                    {activeTools.map(tool => (
+                      <div 
+                        key={tool.name}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTabChange(tool.name);
+                        }}
+                        className={`px-2 ${isMinimized ? 'py-0.5' : 'py-1'} text-xs rounded-t-md cursor-pointer transition-colors
+                                  ${activeToolTab === tool.name 
+                                    ? isDarkMode 
+                                      ? 'bg-black text-[#bccc0f]' 
+                                      : 'bg-white text-gray-800'
+                                    : isDarkMode
+                                      ? 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                      : 'bg-gray-300 text-gray-600 hover:bg-gray-200'
+                                  }`}
+                      >
+                        {tool.name}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <h3 className={`font-mono text-sm flex-shrink-0 ${isDarkMode ? 'text-[#bccc0f]' : 'text-gray-800'}`}>
+                    {toolName ? `${toolName} - Process Output` : 'Terminal Output'}
+                  </h3>
+                )}
+
                 {/* Connection status indicator */}
-                <div className="ml-2 flex items-center">
+                <div className="ml-2 flex items-center flex-shrink-0">
                   <div className={`w-2 h-2 rounded-full mr-1 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {isConnected ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
+                
                 {autoCloseCountdown !== null && (
-                  <div className="ml-2 text-xs text-yellow-500 font-bold">
+                  <div className="ml-2 text-xs text-yellow-500 font-bold flex-shrink-0">
                     Auto-closing in {autoCloseCountdown}s...
                   </div>
                 )}
+
+                {/* Show output summary - in different styles based on minimized state */}
+                {activeTools.length > 0 && (
+                  <div 
+                    className={`ml-2 text-xs flex-shrink-0 ${isMinimized ? 'overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0' : ''} 
+                              ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}
+                  >
+                    {isMinimized ? getOutputSummary() : ''}
+                  </div>
+                )}
               </div>
-              <div className="flex gap-2">
+
+              {/* Right side controls */}
+              <div className="flex gap-2 ml-2 flex-shrink-0 w-[70px] justify-end">
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsMinimized(!isMinimized);
+                    if (isMinimized) {
+                      handleToggleMinimize(false);
+                    } else {
+                      handleToggleMinimize(true);
+                    }
                   }}
                   className={`p-1 rounded hover:bg-opacity-80 text-xs
                            ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-300 text-gray-600'}`}
@@ -281,38 +391,47 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
               </div>
             </div>
             
-            {/* Terminal content */}
-            <div 
-              ref={terminalRef}
-              className={`h-full overflow-auto font-mono text-xs p-2.5 whitespace-pre-wrap
-                       ${isDarkMode ? 'bg-black text-green-300' : 'bg-gray-900 text-green-400'}
-                       rounded-b-xl`}
-            >
-              {!isConnected && (
-                <div className="text-red-400 mb-2 p-1 border border-red-400 rounded bg-red-900 bg-opacity-30">
-                  ⚠️ WebSocket disconnected. Attempting to reconnect...
-                </div>
-              )}
-              
-              {output.length > 0 ? (
-                output.map((line, index) => (
-                  <div key={index} 
-                       className="mb-1"
-                       dangerouslySetInnerHTML={{
-                         __html: line.includes('<span') 
-                           ? line 
-                           : line.includes('Error:') 
-                             ? `<span class="text-red-400">${line}</span>` 
-                             : (line.startsWith('$') 
-                                ? `<span class="text-[#bccc0f]">${line}</span>` 
-                                : `<span class="text-[#bccc0f] mr-2">$</span>${line}`)
-                       }} 
-                  />
-                ))
-              ) : (
-                <div className="text-gray-500 italic">Waiting for process output...</div>
-              )}
-            </div>
+            {/* Terminal content - only show when maximized */}
+            {!isMinimized && (
+              <div 
+                ref={terminalRef}
+                className={`h-full overflow-auto font-mono text-xs p-2.5 whitespace-pre-wrap
+                         ${isDarkMode ? 'bg-black text-green-300' : 'bg-gray-900 text-green-400'}
+                         rounded-b-xl`}
+              >
+                {!isConnected && (
+                  <div className="text-red-400 mb-2 p-1 border border-red-400 rounded bg-red-900 bg-opacity-30">
+                    ⚠️ WebSocket disconnected. Attempting to reconnect...
+                  </div>
+                )}
+                
+                {/* Status indicator for active tool */}
+                {activeToolTab && activeTools.length > 0 && (
+                  <div className={`mb-2 p-1 border border-gray-600 rounded bg-opacity-30 bg-gray-800 text-xs`}>
+                    <span className="text-green-400">▸</span> Currently showing output for <span className="text-[#bccc0f] font-bold">{activeToolTab}</span> - Latest: {getOutputSummary()}
+                  </div>
+                )}
+                
+                {output.length > 0 ? (
+                  output.map((line, index) => (
+                    <div key={index} 
+                        className="mb-1"
+                        dangerouslySetInnerHTML={{
+                          __html: line.includes('<span') 
+                            ? line 
+                            : line.includes('Error:') 
+                              ? `<span class="text-red-400">${line}</span>` 
+                              : (line.startsWith('$') 
+                                  ? `<span class="text-[#bccc0f]">${line}</span>` 
+                                  : `<span class="text-[#bccc0f] mr-2">$</span>${line}`)
+                        }} 
+                    />
+                  ))
+                ) : (
+                  <div className="text-gray-500 italic">Waiting for process output...</div>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

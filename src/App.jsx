@@ -14,7 +14,7 @@ import { memo } from 'react';
 // Use memo for the AppContent component to prevent unnecessary re-renders
 const AppContent = memo(function AppContent() {
   const { isDarkMode } = useTheme();
-  const { isTerminalOpen, activeToolName, terminalOutput, closeTerminal, isConnected } = useTerminal();
+  const { isTerminalOpen, activeToolName, terminalOutput, closeTerminal, isConnected, isTerminalMinimized } = useTerminal();
 
   return (
     <div className={`
@@ -22,7 +22,8 @@ const AppContent = memo(function AppContent() {
       ${isDarkMode ? 'bg-tool-dark text-white' : 'bg-tool-light-mode-bg text-tool-light-mode-text'}
     `}>
       <Header />
-      {isTerminalOpen && <div className="h-[140px] w-full"></div>}
+      {/* Terminal is fixed positioned, no need for spacing */}
+      <div className="h-[140px] w-full"></div>
       <main className="container mx-auto px-4 py-8">
         <SearchBar />
         <ToolGrid />

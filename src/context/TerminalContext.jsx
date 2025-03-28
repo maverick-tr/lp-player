@@ -23,6 +23,7 @@ const parseAnsiString = (str) => {
 export function TerminalProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  const [isTerminalMinimized, setIsTerminalMinimized] = useState(true);
   const [activeToolId, setActiveToolId] = useState(null);
   const [activeToolName, setActiveToolName] = useState('');
   const [terminalOutput, setTerminalOutput] = useState([]);
@@ -267,41 +268,49 @@ export function TerminalProvider({ children }) {
     return null;
   };
 
-  // Open terminal for a specific tool
-  const openTerminalForTool = (toolId) => {
-    if (!toolId) return;
-    
-    // Find tool name
+  // Function to handle minimizing/maximizing the terminal
+  const toggleTerminalSize = (isMinimized) => {
+    setIsTerminalMinimized(isMinimized);
+  };
+
+  // Function to open the terminal for a specific tool
+  const openTerminalForTool = (toolId, preserveState = false) => {
+    // Find the tool by ID
     const tool = tools.find(t => t.id === toolId);
-    const toolName = tool ? tool.name : 'Unknown Tool';
     
-    console.log(`Opening terminal for tool ${toolId} (${toolName})`);
-    
-    setActiveToolId(toolId);
-    setActiveToolName(toolName);
-    setTerminalOutput([`$ Starting process for ${toolName}...`]);
-    setIsTerminalOpen(true);
-    
-    // Subscribe to this tool's output
-    if (isConnected) {
-      subscribeToToolOutput(toolId);
-    } else {
-      // If not connected, add a message indicating we're waiting for connection
-      setTerminalOutput(prev => [
-        ...prev,
-        'Waiting for WebSocket connection to establish...'
-      ]);
+    if (!tool) {
+      console.error(`Tool with ID ${toolId} not found`);
+      return;
     }
-  };
-  
-  // Close the terminal
-  const closeTerminal = () => {
-    setIsTerminalOpen(false);
-    setActiveToolId(null);
+    
+    console.log(`Opening terminal for tool: ${tool.name}`);
+    
+    // Set the active tool
+    setActiveToolId(toolId);
+    setActiveToolName(tool.name);
+    
+    // Clear previous output
     setTerminalOutput([]);
+    
+    // Open the terminal, preserving minimized state if requested
+    setIsTerminalOpen(true);
+    if (!preserveState) {
+      setIsTerminalMinimized(true);
+    }
+    
+    // Subscribe to the tool's output
+    subscribeToToolOutput(toolId);
   };
-  
-  // Clear terminal output
+
+  // Function to close the terminal
+  const closeTerminal = () => {
+    console.log('Closing terminal');
+    setIsTerminalOpen(false);
+    // Reset the minimized state for next time
+    setIsTerminalMinimized(true);
+  };
+
+  // Function to clear the terminal
   const clearTerminal = () => {
     setTerminalOutput([]);
   };
@@ -325,13 +334,15 @@ export function TerminalProvider({ children }) {
     <TerminalContext.Provider
       value={{
         isTerminalOpen,
+        isTerminalMinimized,
         activeToolId,
         activeToolName,
         terminalOutput,
         isConnected,
         openTerminalForTool,
         closeTerminal,
-        clearTerminal
+        clearTerminal,
+        toggleTerminalSize,
       }}
     >
       {children}
