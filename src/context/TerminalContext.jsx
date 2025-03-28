@@ -158,11 +158,18 @@ export function TerminalProvider({ children }) {
 
   // Initialize WebSocket when component mounts
   useEffect(() => {
-    // Clear any previously active tool state when page refreshes
-    setActiveToolId(null);
-    setActiveToolName('');
+    // Clear persistent error states when page refreshes, but don't close active terminal
+    // if a tool is still running
+    const anyToolRunning = tools.some(t => t.execution && t.execution.isRunning);
+    
+    if (!anyToolRunning) {
+      setActiveToolId(null);
+      setActiveToolName('');
+      setIsTerminalOpen(false);
+    }
+    
+    // Always clear terminal output on refresh for a clean state
     setTerminalOutput([]);
-    setIsTerminalOpen(false);
     
     const ws = initWebSocket();
     
