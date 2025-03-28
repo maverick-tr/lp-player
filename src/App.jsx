@@ -22,9 +22,9 @@ const AppContent = memo(function AppContent() {
       ${isDarkMode ? 'bg-tool-dark text-white' : 'bg-tool-light-mode-bg text-tool-light-mode-text'}
     `}>
       <Header />
-      {/* Terminal is fixed positioned, no need for spacing */}
-      <div className="h-[140px] w-full"></div>
-      <main className="container mx-auto px-4 py-8">
+      {/* Only add spacing when terminal is open AND maximized - reduced to match mt-8 */}
+      {isTerminalOpen && !isTerminalMinimized && <div className="h-[108px] w-full"></div>}
+      <main className="container mx-auto px-4 py-8 mt-8">
         <SearchBar />
         <ToolGrid />
       </main>

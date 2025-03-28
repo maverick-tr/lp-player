@@ -24,7 +24,7 @@ const smokeStyles = `
   }
 
   .smokeAnimation {
-    animation: smokeAppearFade 3s ease-out forwards;
+    animation: smokeAppearFade 4s ease-out forwards;
   }
 `;
 
@@ -191,7 +191,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
   const createSmokeEffect = () => {
     if (terminaElRef.current) {
       const terminalRect = terminaElRef.current.getBoundingClientRect();
-      const smokeCount = 15;
+      const smokeCount = isMinimized ? 20 : 15;
 
       // Create a viewport for smoke if it doesn't exist
       if (!viewportRef.current) {
@@ -208,20 +208,30 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
         viewportRef.current = viewport;
       }
 
+      // Get the vertical spread area - for minimized state, spread wider
+      const verticalSpread = isMinimized ? 100 : 50;
+      
       // Create all smoke elements at once
       for (let i = 0; i < smokeCount; i++) {
         if (viewportRef.current) {
           const smoke = document.createElement('div');
           smoke.className = 'smoke smokeAnimation';
           
-          // Position the smoke based on the terminal position
-          smoke.style.left = `${terminalRect.left + Math.random() * terminalRect.width}px`;
-          smoke.style.top = `${terminalRect.top + Math.random() * 50}px`;
+          // Position the smoke - for minimized view, distribute more widely
+          smoke.style.left = `${terminalRect.left - 50 + Math.random() * (terminalRect.width + 100)}px`;
+          smoke.style.top = `${terminalRect.top - 20 + Math.random() * verticalSpread}px`;
           
-          // Randomize size
-          const size = 40 + Math.random() * 100;
+          // Randomize size - larger for minimized view for better visibility
+          const minSize = isMinimized ? 30 : 40;
+          const maxSize = isMinimized ? 90 : 100;
+          const size = minSize + Math.random() * (maxSize - minSize);
           smoke.style.width = `${size}px`;
           smoke.style.height = `${size}px`;
+          
+          // For minimized view, increase initial opacity for better visibility
+          if (isMinimized) {
+            smoke.style.opacity = '0.15';  // This will be modified by the animation
+          }
           
           viewportRef.current.appendChild(smoke);
           
@@ -236,7 +246,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
               document.body.removeChild(viewportRef.current);
               viewportRef.current = null;
             }
-          }, 3000);
+          }, 4000); // Use same duration for both minimized and maximized
         }
       }
     }
@@ -249,11 +259,11 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
     setIsClosing(true);
     createSmokeEffect();
     
-    // Delay the actual close to allow smoke animation to start
+    // Delay the actual close to allow smoke animation to run for 1 second before closing
     setTimeout(() => {
       onClose();
       setIsClosing(false);
-    }, 500);
+    }, 1000);
   };
 
   // Handle expanding/minimizing the terminal

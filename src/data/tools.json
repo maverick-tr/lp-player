@@ -82,7 +82,7 @@
           "activationCommand": ""
         },
         "command": "npm run dev",
-        "isRunning": false,
+        "isRunning": true,
         "error": null
       }
     },
