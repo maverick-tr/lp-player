@@ -362,6 +362,102 @@ app.post('/api/tools/stop', async (req, res) => {
   }
 });
 
+// API endpoint to detect environment in a directory
+app.post('/api/detect-environment', async (req, res) => {
+  try {
+    const { rootPath } = req.body;
+    
+    if (!rootPath) {
+      return res.status(400).json({ success: false, message: 'Root path is required' });
+    }
+    
+    console.log(`Detecting environment in: ${rootPath}`);
+    
+    // Check for various environment indicators
+    const environmentInfo = {
+      hasPythonVenv: false,
+      hasConda: false,
+      hasNodeModules: false,
+      hasDotEnv: false,
+      hasDocker: false
+    };
+    
+    try {
+      // Check for Python virtual environment
+      try {
+        const venvPaths = [
+          path.join(rootPath, '.venv'),
+          path.join(rootPath, 'venv'),
+          path.join(rootPath, 'env')
+        ];
+        
+        for (const venvPath of venvPaths) {
+          const activateScript = path.join(venvPath, 'bin', 'activate');
+          await fs.access(activateScript);
+          environmentInfo.hasPythonVenv = true;
+          break;
+        }
+      } catch (e) {
+        // Ignore errors if not found
+      }
+      
+      // Check for Conda environment
+      try {
+        const condaPaths = [
+          path.join(rootPath, 'conda-meta'),
+          path.join(rootPath, 'miniconda3'),
+          path.join(rootPath, 'anaconda3')
+        ];
+        
+        for (const condaPath of condaPaths) {
+          await fs.access(condaPath);
+          environmentInfo.hasConda = true;
+          break;
+        }
+      } catch (e) {
+        // Ignore errors if not found
+      }
+      
+      // Check for Node.js project
+      try {
+        await fs.access(path.join(rootPath, 'node_modules'));
+        environmentInfo.hasNodeModules = true;
+      } catch (e) {
+        // Ignore errors if not found
+      }
+      
+      // Check for .env file
+      try {
+        await fs.access(path.join(rootPath, '.env'));
+        environmentInfo.hasDotEnv = true;
+      } catch (e) {
+        // Ignore errors if not found
+      }
+      
+      // Check for Docker
+      try {
+        await fs.access(path.join(rootPath, 'Dockerfile'));
+        environmentInfo.hasDocker = true;
+      } catch (e) {
+        // Ignore errors if not found
+      }
+      
+    } catch (error) {
+      console.error(`Error checking environment: ${error.message}`);
+      return res.status(500).json({ 
+        success: false, 
+        message: `Error checking environment: ${error.message}` 
+      });
+    }
+    
+    console.log(`Environment detection results for ${rootPath}:`, environmentInfo);
+    res.status(200).json(environmentInfo);
+  } catch (error) {
+    console.error('Error detecting environment:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Start the server
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${PORT}`);

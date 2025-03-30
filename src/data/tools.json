@@ -1,63 +1,6 @@
 {
   "tools": [
     {
-      "id": "1",
-      "name": "ORA",
-      "description": "All things AI Studio for our local AI Lab",
-      "url": "https://ora.luxson.uk",
-      "logoPath": "images/ora_favicon.png",
-      "requiresCheckout": false,
-      "category": "AI",
-      "port": "",
-      "tags": [
-        "AI",
-        "Hub",
-        "AI Lab",
-        "Models",
-        "Ora Mini",
-        "Frijj",
-        "AI Studio",
-        "Sami"
-      ],
-      "execution": {
-        "rootPath": "/Users/st/Documents/Projects/ORA",
-        "environment": {
-          "activationCommand": "source .venv/bin/activate"
-        },
-        "command": "python app.py",
-        "isRunning": false,
-        "error": null
-      }
-    },
-    {
-      "id": "2",
-      "name": "Neo",
-      "description": "Pdf ProofReader Agent, Decoding PDFs one page at a time",
-      "url": "https://neo.luxson.uk",
-      "logoPath": "images/neo_logo.png",
-      "requiresCheckout": true,
-      "maxCheckouts": 1,
-      "category": "media",
-      "port": "",
-      "tags": [
-        "design",
-        "media",
-        "pdf",
-        "proofreader",
-        "neo",
-        "brochures"
-      ],
-      "execution": {
-        "rootPath": "/Users/st/Documents/Projects/Neo",
-        "environment": {
-          "activationCommand": "conda activate neo-env"
-        },
-        "command": "npm start",
-        "isRunning": false,
-        "error": null
-      }
-    },
-    {
       "id": "3",
       "name": "Bolt",
       "description": "AI Full Stack Code Builder",
@@ -88,27 +31,32 @@
     },
     {
       "id": "4",
-      "name": "Luxson Project Maker",
-      "description": "New Project Setup Tool",
+      "name": "Browser Use",
+      "description": "Browser based AI Agent",
       "url": "files/LuxsonTemplateProjectMaker.bat",
-      "logoPath": "images/luxson_project_maker.jpg",
+      "logoPath": "images/browser-use.jpg",
       "type": "download",
       "requiresCheckout": false,
-      "category": "project-management",
-      "port": "",
+      "category": "Browser AI",
+      "port": "7788",
       "tags": [
-        "project-management",
-        "project setup",
-        "luxson project maker"
+        "AI",
+        "AI Agent",
+        "browser",
+        "automation",
+        "deep research"
       ],
       "execution": {
-        "rootPath": "/Users/st/Documents/Projects/LuxsonTemplateProjectMaker",
+        "rootPath": "/Users/st/Documents/Projects/browser-use",
         "environment": {
-          "activationCommand": ""
+          "activationCommand": "source .venv/bin/activate"
         },
-        "command": "node index.js",
+        "command": "python webui.py --ip 127.0.0.1 --port 7788",
         "isRunning": false,
         "error": null
+      },
+      "environment": {
+        "activationCommand": "conda activate env-nam"
       }
     },
     {
@@ -163,34 +111,6 @@
           "activationCommand": "source .venv/bin/activate"
         },
         "command": "start.sh",
-        "isRunning": false,
-        "error": null
-      }
-    },
-    {
-      "id": "7",
-      "name": "ORA/AI Prompt Generator",
-      "description": "Utility to generate large context prompts for AI models",
-      "url": "http://192.168.24.6:5500/",
-      "logoPath": "images/command-line.png",
-      "requiresCheckout": false,
-      "category": "hub",
-      "port": "5500",
-      "tags": [
-        "ai",
-        "gui",
-        "interface",
-        "scripts",
-        "tools",
-        "ora",
-        "ai prompt generator"
-      ],
-      "execution": {
-        "rootPath": "/Users/st/Documents/Projects/OraPromptGen",
-        "environment": {
-          "activationCommand": ""
-        },
-        "command": "npm start",
         "isRunning": false,
         "error": null
       }

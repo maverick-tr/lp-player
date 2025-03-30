@@ -221,13 +221,25 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
     setDetectingEnv(true);
     setError('');
 
-    // This would be replaced with an actual API call to detect environments
-    setTimeout(() => {
-      // Simulating environment detection
-      const hasVenv = Math.random() > 0.5;
-      const hasConda = Math.random() > 0.7;
+    try {
+      // Make an API call to check if various environment files exist
+      const response = await fetch(`http://${window.location.hostname}:3015/api/detect-environment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rootPath: appData.execution.rootPath
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with error (${response.status})`);
+      }
+
+      const result = await response.json();
       
-      if (hasVenv) {
+      if (result.hasPythonVenv) {
         setAppData({
           ...appData,
           execution: {
@@ -237,13 +249,34 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
             }
           }
         });
-      } else if (hasConda) {
+      } else if (result.hasConda) {
         setAppData({
           ...appData,
           execution: {
             ...appData.execution,
             environment: {
               activationCommand: 'conda activate env-name'
+            }
+          }
+        });
+      } else if (result.hasNodeModules) {
+        setAppData({
+          ...appData,
+          execution: {
+            ...appData.execution,
+            environment: {
+              activationCommand: ''
+            }
+          }
+        });
+      } else if (result.hasDotEnv) {
+        // If .env file is detected but no other environment, don't suggest conda
+        setAppData({
+          ...appData,
+          execution: {
+            ...appData.execution,
+            environment: {
+              activationCommand: ''
             }
           }
         });
@@ -258,9 +291,12 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
           }
         });
       }
-      
+    } catch (error) {
+      console.error('Error detecting environment:', error);
+      setError(`Failed to detect environment: ${error.message}`);
+    } finally {
       setDetectingEnv(false);
-    }, 1000);
+    }
   };
 
   const handleEnvironmentCommandChange = (e) => {
@@ -597,7 +633,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       type="text"
                       name="environment.activationCommand"
                       value={appData.execution.environment.activationCommand}
-                      onChange={handleInputChange}
+                      onChange={handleEnvironmentCommandChange}
                       className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
                       placeholder="e.g. source .venv/bin/activate"
                     />
