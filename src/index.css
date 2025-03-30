@@ -4,8 +4,16 @@
 @tailwind components;
 @tailwind utilities;
 
+body, #root {
+  @apply transition-colors duration-200;
+}
+
+/* Add class to exempt elements from filter effects */
+.filter-exempt {
+  filter: none !important;
+}
+
 body {
   margin: 0;
   font-family: 'Inconsolata', monospace;
-  background: #000000;
 } 

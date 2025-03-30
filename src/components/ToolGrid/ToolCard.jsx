@@ -319,7 +319,7 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
           
           {/* Vinyl disc */}
           <motion.div 
-            className="absolute top-1/2 left-[8px] -translate-y-1/2 w-6 h-6 z-10"
+            className={`absolute top-1/2 left-[8px] -translate-y-1/2 w-6 h-6 z-10`}
             animate={{ 
               x: isRunning ? 22 : 0
             }}
@@ -347,6 +347,12 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
                   repeatType: "loop"
                 }
               }}
+              style={{
+                width: '24px',
+                height: '24px',
+                transform: `scale(1) ${isRunning ? 'rotate(360deg)' : 'rotate(0deg)'}`,
+                transformOrigin: 'center center'
+              }}
             >
               {/* Grooves */}
               <div 
@@ -365,7 +371,20 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
               ></div>
               
               {/* Center hole */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-black"></div>
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: '24px',
+                height: '24px',
+                marginLeft: '-12px',
+                marginTop: '-12px',
+                background: 'black',
+                border: '2px solid #444',
+                borderRadius: '50%',
+                transform: 'scale(1)',
+                transformOrigin: 'center center'
+              }}></div>
               
               {/* Label */}
               <div 
@@ -488,7 +507,7 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
 
       {/* Vinyl record peeking out from top of sleeve */}
         <motion.div 
-        className="absolute top-0 inset-x-0 h-24 overflow-visible z-20 pointer-events-none"
+        className="absolute top-0 inset-x-0 h-24 overflow-visible z-20 pointer-events-none filter-exempt"
         animate={{
           y: isRunning ? -180 : 0,
           opacity: isRunning ? 0 : 1
@@ -502,6 +521,14 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             duration: 0.8, 
             delay: isRunning ? 1.5 : 0 
           }
+        }}
+        style={{
+          // Ensure consistent rendering regardless of filter
+          transform: `translateY(${isRunning ? '-180px' : '0px'}) scale(1)`,
+          opacity: isRunning ? 0 : 1,
+          // Force height to ensure proper sizing
+          height: '24px',
+          width: '100%'
         }}
       >
         <div 
@@ -536,7 +563,10 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             boxShadow: isDarkMode 
               ? '0 -5px 15px rgba(0,0,0,0.5)' 
               : '0 -5px 15px rgba(0,0,0,0.1)',
-            opacity: isDarkMode ? 0.3 : 0.25
+            opacity: isDarkMode ? 0.3 : 0.25,
+            // Ensure consistent rendering regardless of mode or filter
+            transform: 'scale(1)',
+            transformOrigin: 'center center'
           }}
         >
           {/* Center hole */}
@@ -550,7 +580,9 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             marginTop: '-12px',
             background: 'black',
             border: '2px solid #444',
-            borderRadius: '50%'
+            borderRadius: '50%',
+            transform: 'scale(1)',
+            transformOrigin: 'center center'
           }}></div>
           
           {/* Record label area */}
@@ -564,7 +596,9 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             marginTop: '-35px',
             background: isDarkMode ? 'black' : '#555',
             opacity: isDarkMode ? 0.7 : 0.4,
-            borderRadius: '50%'
+            borderRadius: '50%',
+            transform: 'scale(1)',
+            transformOrigin: 'center center'
           }}></div>
         </div>
         </motion.div>
