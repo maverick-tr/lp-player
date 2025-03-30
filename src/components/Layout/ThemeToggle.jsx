@@ -70,15 +70,15 @@ function ThemeToggle() {
             variants={popoverVariants}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className={`
-              absolute right-0 mt-2 w-48 p-4 rounded-lg shadow-xl z-50
-              ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-white text-gray-800 border border-gray-200'}
+              absolute right-0 mt-2 w-48 p-3 rounded-lg shadow-xl z-50
+              ${isDarkMode ? 'bg-black text-white border border-[#333]' : 'bg-white text-gray-800 border border-gray-200'}
             `}
             style={{ top: 'calc(100% + 0.5rem)' }} // Position below the button
           >
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Dark/Light Mode Toggle */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Mode</span>
+                <span className="text-xs font-medium">Mode</span>
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -101,8 +101,8 @@ function ThemeToggle() {
               </div>
 
               {/* Sepia Slider */}
-              <div className="space-y-1">
-                <label htmlFor="sepiaSlider" className="text-sm font-medium block">Sepia</label>
+              <div className="space-y-0.5">
+                <label htmlFor="sepiaSlider" className="text-xs font-medium block">Sepia</label>
                 <input
                   id="sepiaSlider"
                   type="range"
@@ -110,14 +110,14 @@ function ThemeToggle() {
                   max="100"
                   value={sepiaValue}
                   onChange={handleSepiaChange}
-                  className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 slider-thumb"
+                  className="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 slider-thumb"
                 />
-                <span className="text-xs text-gray-500 dark:text-gray-400 block text-right">{sepiaValue}%</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-300 block text-right">{sepiaValue}%</span>
               </div>
 
               {/* Hue Rotation Slider - NEW */}
-              <div className="space-y-1">
-                <label htmlFor="hueSlider" className="text-sm font-medium block">Color Hue</label>
+              <div className="space-y-0.5">
+                <label htmlFor="hueSlider" className="text-xs font-medium block">Color Hue</label>
                 <input
                   id="hueSlider"
                   type="range"
@@ -125,9 +125,9 @@ function ThemeToggle() {
                   max="360"
                   value={hueValue}
                   onChange={handleHueChange}
-                  className="w-full h-2 bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 hue-slider-thumb"
+                  className="w-full h-1.5 bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 hue-slider-thumb"
                 />
-                <span className="text-xs text-gray-500 dark:text-gray-400 block text-right">{hueValue}°</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-300 block text-right">{hueValue}°</span>
               </div>
 
               {/* Combined Styles for Slider Thumbs */}
@@ -136,16 +136,16 @@ function ThemeToggle() {
                 .hue-slider-thumb::-webkit-slider-thumb {
                   -webkit-appearance: none;
                   appearance: none;
-                  width: 16px;
-                  height: 16px;
+                  width: 14px;
+                  height: 14px;
                   background: ${isDarkMode ? '#bccc0f' : '#5856d6'}; /* Adjust thumb color based on mode */
                   border-radius: 50%;
                   cursor: pointer;
                 }
                 .slider-thumb::-moz-range-thumb,
                 .hue-slider-thumb::-moz-range-thumb {
-                  width: 16px;
-                  height: 16px;
+                  width: 14px;
+                  height: 14px;
                   background: ${isDarkMode ? '#bccc0f' : '#5856d6'}; /* Adjust thumb color based on mode */
                   border-radius: 50%;
                   cursor: pointer;

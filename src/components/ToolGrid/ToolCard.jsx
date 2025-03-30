@@ -160,6 +160,87 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
           >
             {/* Subtle Texture */}
              <div className="absolute inset-0 rounded-full opacity-10" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E")` }}></div>
+
+            {/* ON position glow indicator */}
+            <motion.div 
+              className="absolute inset-0 rounded-full overflow-hidden pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ 
+                opacity: isRunning ? 1 : 0,
+              }}
+              transition={{ 
+                opacity: { duration: 0.3, delay: isRunning ? 0.2 : 0 }
+              }}
+            >
+              <motion.div
+                className="absolute rounded-full"
+                style={{ 
+                  width: '100%',
+                  height: '100%',
+                  top: '0',
+                  left: '0',
+                  background: `radial-gradient(circle at center, ${isDarkMode ? 'rgba(188, 204, 15, 0.8)' : 'rgba(188, 204, 15, 0.6)'} 0%, transparent 75%)`,
+                  filter: `blur(3px) brightness(${isDarkMode ? 1.4 : 1.2})`
+                }}
+                initial={{ scale: 0.3, x: 10 }}
+                animate={{ 
+                  scale: isRunning ? 1 : 0.3
+                }}
+                transition={{ 
+                  type: "spring",
+                  stiffness: 100,
+                  damping: 15,
+                  delay: isRunning ? 0.15 : 0
+                }}
+              />
+
+              {/* Additional subtle pulsing glow for extra effect */}
+              {isRunning && (
+                <motion.div
+                  className="absolute rounded-full"
+                  style={{ 
+                    width: '90%', 
+                    height: '90%', 
+                    top: '5%',
+                    left: '5%',
+                    background: `radial-gradient(circle at center, ${isDarkMode ? 'rgba(188, 204, 15, 0.4)' : 'rgba(188, 204, 15, 0.3)'} 0%, transparent 80%)`,
+                    filter: `blur(6px)`
+                  }}
+                  animate={{ 
+                    opacity: [0.6, 1, 0.6],
+                    scale: [0.95, 1.05, 0.95],
+                  }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              )}
+
+              {/* Outer ring glow */}
+              {isRunning && (
+                <motion.div 
+                  className="absolute rounded-full"
+                  style={{
+                    width: '110%',
+                    height: '110%',
+                    top: '-5%',
+                    left: '-5%',
+                    border: `2px solid ${isDarkMode ? 'rgba(188, 204, 15, 0.3)' : 'rgba(188, 204, 15, 0.2)'}`,
+                    filter: 'blur(1.5px)'
+                  }}
+                  animate={{
+                    opacity: [0.6, 0.8, 0.6],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                />
+              )}
+            </motion.div>
           </div>
 
           {/* OFF Label */}
@@ -197,7 +278,11 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             whileTap={!isTransitioning ? "tap" : "idle"}
             animate={{ 
               rotate: rotationAngle, 
-              boxShadow: isTransitioning ? 'none' : (isDarkMode ? '0px 2px 5px rgba(0, 0, 0, 0.4)' : '0px 2px 5px rgba(0, 0, 0, 0.2)') 
+              boxShadow: isTransitioning ? 'none' : (
+                isRunning 
+                  ? `0px 2px 5px ${isDarkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.2)'}, 0 0 ${isDarkMode ? '8px' : '10px'} ${isDarkMode ? 'rgba(188, 204, 15, 0.7)' : 'rgba(188, 204, 15, 0.5)'}, 0 0 ${isDarkMode ? '14px' : '16px'} ${isDarkMode ? 'rgba(188, 204, 15, 0.4)' : 'rgba(188, 204, 15, 0.3)'}`
+                  : (isDarkMode ? '0px 2px 5px rgba(0, 0, 0, 0.4)' : '0px 2px 5px rgba(0, 0, 0, 0.2)')
+              )
             }}
             transition={{ 
               rotate: { type: "spring", stiffness: 200, damping: 20 },
@@ -483,11 +568,38 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
         <div className="flex flex-col items-center">
           <motion.img 
             layout="position"
-            src={tool.logoPath} 
+            src={tool.logoPath}
             alt={tool.name}
             className="w-14 h-14 object-contain mb-2"
             style={{
-              filter: isDarkMode ? 'drop-shadow(0 0 2px rgba(255,255,255,0.5))' : 'drop-shadow(0 0 2px rgba(0,0,0,0.5))'
+              filter: isDarkMode ? 'drop-shadow(0 0 2px rgba(255,255,255,0.5))' : 'drop-shadow(0 0 2px rgba(0,0,0,0.5))',
+              colorInterpolation: 'sRGB'
+            }}
+            onError={(e) => {
+              // Fallback if image fails to load
+              console.warn(`Failed to load image: ${tool.logoPath}`);
+              
+              // Check if the image is a data URI SVG for vinyl
+              if (tool.logoPath && tool.logoPath.startsWith('data:image/svg+xml')) {
+                // The SVG data URI should already have the color embedded
+                // We don't need to do anything special if it fails to load
+                // Just let the fallback handle it
+                e.target.style.display = 'none';
+                e.target.parentNode.innerHTML += `
+                  <div class="w-14 h-14 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="56" height="56">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="${isDarkMode ? '#bccc0f' : '#666'}" stroke-width="5" />
+                      <circle cx="50" cy="50" r="20" fill="none" stroke="${isDarkMode ? '#bccc0f' : '#666'}" stroke-width="3" />
+                      <circle cx="50" cy="50" r="5" fill="${isDarkMode ? '#bccc0f' : '#666'}" />
+                      <line x1="50" y1="5" x2="50" y2="20" stroke="${isDarkMode ? '#bccc0f' : '#666'}" stroke-width="2" />
+                    </svg>
+                  </div>
+                `;
+              } else {
+                // Fall back to a text representation
+                e.target.style.display = 'none';
+                e.target.parentNode.innerHTML += `<div class="w-14 h-14 flex items-center justify-center text-sm font-bold ${isDarkMode ? 'text-[#bccc0f]' : 'text-gray-700'}">${tool.name.substring(0, 2).toUpperCase()}</div>`;
+              }
             }}
           />
           <h3

@@ -3,14 +3,56 @@ import { Dialog } from '@headlessui/react';
 import { useTools } from '../../hooks/useTools';
 import { useTheme } from '../../hooks/useTheme';
 
+// Array of possible vinyl colors to use for default images
+const DEFAULT_COLORS = [
+  '#bccc0f', // Yellow (app theme color)
+  '#22c55e', // Green
+  '#3b82f6', // Blue
+  '#a855f7', // Purple
+  '#ec4899', // Pink
+  '#f97316', // Orange
+  '#ef4444', // Red
+  '#06b6d4', // Cyan
+  '#14b8a6', // Teal
+  '#8b5cf6'  // Violet
+];
+
 function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
   const { isDarkMode } = useTheme();
   const { addApp, updateApp, tools: allTools } = useTools();
+  
+  // Function to find a color not already used by other apps
+  const getUniqueColor = () => {
+    // Extract all colors already used in default vinyl logos
+    const usedColors = allTools
+      .filter(tool => tool.logoPath && tool.logoPath.includes('default_vynl.svg?color='))
+      .map(tool => {
+        const match = tool.logoPath.match(/color=([^&]+)/);
+        return match ? match[1] : null;
+      })
+      .filter(Boolean);
+      
+    // Find available colors
+    const availableColors = DEFAULT_COLORS.filter(color => 
+      !usedColors.includes(encodeURIComponent(color))
+    );
+    
+    // If all colors are used, pick a random one, otherwise pick a random available color
+    if (availableColors.length === 0) {
+      return DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)];
+    } else {
+      return availableColors[Math.floor(Math.random() * availableColors.length)];
+    }
+  };
+  
+  // Generate a random color for the default vinyl image
+  const defaultVinylColor = useRef(getUniqueColor());
+
   const [appData, setAppData] = useState(
     existingTool || {
       name: '',
       description: '',
-      logoPath: 'images/default-app.png',
+      logoPath: '',
       category: 'application',
       tags: [],
       port: '',
@@ -62,7 +104,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
 
   const hasChanges = appData.name !== '' || 
     appData.description !== '' || 
-    appData.logoPath !== 'images/default-app.png' ||
+    appData.logoPath !== '' ||
     appData.category !== 'application' ||
     appData.tags.length > 0 ||
     appData.port !== '' ||
@@ -338,11 +380,17 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       return;
     }
     
+    // If no logo path is provided, use the default vinyl SVG with the random color
+    const finalAppData = {
+      ...appData,
+      logoPath: appData.logoPath || generateVinylSvgDataUri(defaultVinylColor.current)
+    };
+    
     setIsSubmitting(true);
     
     try {
       if (isEditing) {
-        const result = await updateApp(appData);
+        const result = await updateApp(finalAppData);
         if (result) {
           setSuccess('App updated successfully!');
           setTimeout(() => {
@@ -352,7 +400,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
           setError('Failed to update app. Please try again.');
         }
       } else {
-        const result = await addApp(appData);
+        const result = await addApp(finalAppData);
         if (result) {
           setSuccess('App added successfully!');
           setTimeout(() => {
@@ -367,6 +415,19 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Function to generate an inline SVG data URI with the specified color
+  const generateVinylSvgDataUri = (color) => {
+    const encodedSvg = encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="56" height="56">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="${color}" stroke-width="5" />
+        <circle cx="50" cy="50" r="20" fill="none" stroke="${color}" stroke-width="3" />
+        <circle cx="50" cy="50" r="5" fill="${color}" />
+        <line x1="50" y1="5" x2="50" y2="20" stroke="${color}" stroke-width="2" />
+      </svg>
+    `);
+    return `data:image/svg+xml;charset=UTF-8,${encodedSvg}`;
   };
 
   return (
@@ -481,8 +542,19 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                 <div className="w-12 h-12 border rounded-md overflow-hidden flex items-center justify-center bg-gray-100">
                   {imagePreview ? (
                     <img src={imagePreview} alt="Logo preview" className="max-w-full max-h-full object-contain" />
+                  ) : appData.logoPath ? (
+                    <img src={appData.logoPath} alt="Logo preview" className="max-w-full max-h-full object-contain" />
                   ) : (
-                    <div className="text-xs text-gray-400 text-center">No image</div>
+                    <div className="text-xs text-gray-400 text-center flex flex-col items-center justify-center">
+                      <img 
+                        src={generateVinylSvgDataUri(defaultVinylColor.current)} 
+                        alt="Default vinyl" 
+                        width="28" 
+                        height="28" 
+                        className="mx-auto"
+                      />
+                      <span className="text-[7px] mt-1">Vinyl</span>
+                    </div>
                   )}
                 </div>
                 <div className="flex-1">

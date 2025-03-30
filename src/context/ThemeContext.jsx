@@ -9,10 +9,10 @@ export function ThemeProvider({ children }) {
     const savedTheme = sessionStorage.getItem('theme');
     return savedTheme ? savedTheme === 'dark' : true;
   });
-  // Initialize sepia value from sessionStorage or default to 40
+  // Initialize sepia value from sessionStorage or default to 10
   const [sepiaValue, setSepiaStateValue] = useState(() => {
     const savedSepia = sessionStorage.getItem('sepia');
-    return savedSepia ? parseInt(savedSepia, 10) : 40; // Default sepia is 40%
+    return savedSepia ? parseInt(savedSepia, 10) : 10; // Default sepia is 10%
   });
   // Initialize hue value from sessionStorage or default to 0
   const [hueValue, setHueStateValue] = useState(() => {
