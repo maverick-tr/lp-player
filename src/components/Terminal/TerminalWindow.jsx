@@ -302,23 +302,24 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
             }}
             exit={{ y: -50, opacity: 0 }}
             transition={{ type: 'spring', damping: 22, stiffness: 180 }}
-            className={`fixed top-[140px] left-0 right-0 z-40 mx-auto max-w-3xl 
+            className={`fixed top-[140px] left-4 right-4 sm:left-8 sm:right-8 z-40 mx-auto max-w-3xl 
                      ${isDarkMode ? 'bg-tool-dark' : 'bg-gray-100'}
                      border border-[#bccc0f] shadow-xl overflow-hidden
+                     flex flex-col
                      ${isMinimized ? 'rounded-xl' : 'rounded-xl'}`}
           >
             {/* Terminal header/tabbed view*/}
             <div 
-              className={`flex justify-between items-center px-3 py-1.5
+              className={`flex justify-between items-center px-4 ${isMinimized ? 'h-full' : 'py-2.5'}
                       ${isDarkMode ? 'bg-[#1a1a1a]' : 'bg-gray-200'} 
                       border-b ${!isMinimized ? 'border-[#bccc0f]/50' : 'border-transparent'} cursor-pointer
                       rounded-t-xl ${isMinimized ? 'rounded-b-xl' : ''}`}
             >
               {/* Left side: Name and tabs */}
-              <div className="flex items-center gap-1 overflow-hidden flex-grow max-w-[calc(100%-80px)]">
+              <div className="flex items-center gap-1.5 overflow-hidden flex-grow max-w-[calc(100%-85px)]">
                 {/* Show tabs whenever multiple tools are running (both minimized and maximized) */}
                 {activeTools.length > 0 ? (
-                  <div className="flex space-x-0.5 flex-shrink-0">
+                  <div className="flex space-x-1 flex-shrink-0">
                     {activeTools.map(tool => (
                       <div 
                         key={tool.name}
@@ -326,7 +327,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
                           e.stopPropagation();
                           handleTabChange(tool.name);
                         }}
-                        className={`px-2 ${isMinimized ? 'py-0.5' : 'py-1'} text-xs rounded-t-md cursor-pointer transition-colors
+                        className={`px-3 ${isMinimized ? 'py-0.5' : 'py-1.5'} text-xs rounded-t-md cursor-pointer transition-colors
                                   ${activeToolTab === tool.name 
                                     ? isDarkMode 
                                       ? 'bg-black text-[#bccc0f]' 
@@ -347,7 +348,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
                 )}
 
                 {/* Connection status indicator */}
-                <div className="ml-2 flex items-center flex-shrink-0">
+                <div className="ml-3 flex items-center flex-shrink-0">
                   <div className={`w-2 h-2 rounded-full mr-1 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                   <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {isConnected ? 'Connected' : 'Disconnected'}
@@ -355,7 +356,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
                 </div>
                 
                 {autoCloseCountdown !== null && (
-                  <div className="ml-2 text-xs text-yellow-500 font-bold flex-shrink-0">
+                  <div className="ml-3 text-xs text-yellow-500 font-bold flex-shrink-0">
                     Auto-closing in {autoCloseCountdown}s...
                   </div>
                 )}
@@ -363,7 +364,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
                 {/* Show output summary - in different styles based on minimized state */}
                 {activeTools.length > 0 && (
                   <div 
-                    className={`ml-2 text-xs flex-shrink-0 ${isMinimized ? 'overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0' : ''} 
+                    className={`ml-3 text-xs flex-shrink-0 ${isMinimized ? 'overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0' : ''} 
                               ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}
                   >
                     {isMinimized ? getOutputSummary() : ''}
@@ -372,7 +373,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
               </div>
 
               {/* Right side controls */}
-              <div className="flex gap-2 ml-2 flex-shrink-0 w-[70px] justify-end">
+              <div className="flex gap-2.5 ml-2 flex-shrink-0 w-[75px] justify-end">
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
@@ -382,7 +383,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
                       handleToggleMinimize(true);
                     }
                   }}
-                  className={`p-1 rounded hover:bg-opacity-80 text-xs
+                  className={`${isMinimized ? 'p-1' : 'p-1.5'} rounded hover:bg-opacity-80 text-xs
                            ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-300 text-gray-600'}`}
                   title={isMinimized ? "Expand" : "Collapse"}
                 >
@@ -393,7 +394,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
                     e.stopPropagation();
                     handleClose();
                   }}
-                  className={`p-1 rounded hover:bg-opacity-80 text-xs
+                  className={`${isMinimized ? 'p-1' : 'p-1.5'} rounded hover:bg-opacity-80 text-xs
                            ${isDarkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-300 text-gray-600'}`}
                 >
                   ✕

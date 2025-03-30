@@ -16,9 +16,6 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
   const [isStopping, setIsStopping] = useState(false);
   const [runError, setRunError] = useState(null);
   const [buttonState, setButtonState] = useState(isRunning ? 'stop' : 'run');
-  const [blobsVisible, setBlobsVisible] = useState(false);
-  const [fillPercentage, setFillPercentage] = useState(0);
-  const [rotation, setRotation] = useState(0);
 
   const firstGlowColor = isRunning
     ? (isDarkMode ? 'rgba(74,222,128,0.2)' : 'rgba(74,222,128,0.2)')
@@ -34,19 +31,8 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
       setButtonState('stop');
     } else if (!isRunning && !isStarting) {
       setButtonState('run');
-      setBlobsVisible(false);
-      setFillPercentage(0);
     }
   }, [isRunning, isStarting, isStopping]);
-
-  useEffect(() => {
-    // Reset state when the app stops running (but not during stopping animation)
-    if (!isRunning && !isStopping) {
-      setIsStarting(false);
-      setBlobsVisible(false);
-      setFillPercentage(0);
-    }
-  }, [isRunning, isStopping]);
 
   useEffect(() => {
     // If there's an error with the app, show notification
@@ -58,168 +44,10 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
       setRunError(tool.execution.error);
       setIsStarting(false);
       setButtonState('run');
-      setBlobsVisible(false);
-      setFillPercentage(0);
     } else {
       setRunError(null);
     }
   }, [tool.execution.error, tool.name, showNotification]);
-
-  // Handle filling animation
-  useEffect(() => {
-    let animationFrame;
-    let startTime = null;
-    let timeouts = [];
-    
-    // Filling animation
-    if (isStarting && !isStopping) {
-      // Show blobs at 0% fill
-      setBlobsVisible(true);
-      setFillPercentage(0);
-      
-      const duration = tool.port ? 2000 : 1200; // Animation duration in ms
-      
-      // Animate the fill smoothly using requestAnimationFrame
-      const animateFill = (timestamp) => {
-        if (!startTime) startTime = timestamp;
-        const elapsed = timestamp - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        // Use easeOutQuad for smoother animation
-        const eased = progress < 0.5 
-          ? 2 * progress * progress 
-          : -1 + (4 - 2 * progress) * progress;
-          
-        setFillPercentage(eased * 110); // Go to 110% to ensure complete fill
-        
-        if (progress < 1) {
-          animationFrame = requestAnimationFrame(animateFill);
-        } else {
-          // Animation completed, now start the app
-          startApp();
-          
-          // Wait a moment and then switch to stop state
-          timeouts.push(setTimeout(() => {
-            // Note: We now change the button to "Starting..." but not to "Stop" yet
-            // The actual "Stop" state will be triggered by the tool context
-            // when it detects the app is truly ready
-            setButtonState('waiting');
-            setIsStarting(false);
-            
-            // Keep the yellow fill for a moment before hiding
-            timeouts.push(setTimeout(() => {
-              setBlobsVisible(false);
-            }, 300));
-          }, 200));
-        }
-      };
-      
-      animationFrame = requestAnimationFrame(animateFill);
-      
-      return () => {
-        cancelAnimationFrame(animationFrame);
-        timeouts.forEach(clearTimeout);
-      };
-    }
-    
-    // Draining animation
-    else if (isStopping && !isStarting) {
-      // Show blobs fully filled
-      setBlobsVisible(true);
-      setFillPercentage(100);
-      
-      const duration = 1000; // Drain animation duration
-      
-      // Animate the drain smoothly
-      const animateDrain = (timestamp) => {
-        if (!startTime) startTime = timestamp;
-        const elapsed = timestamp - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        // Use easeInQuad for draining effect
-        const eased = progress * progress;
-        setFillPercentage(100 - (eased * 110)); // Start from 100% down to -10%
-        
-        if (progress < 1) {
-          animationFrame = requestAnimationFrame(animateDrain);
-        } else {
-          // Drain complete, now stop the app
-          finishStopApp();
-          
-          // Hide blobs and reset state
-          setBlobsVisible(false);
-          setIsStopping(false);
-          setButtonState('run');
-        }
-      };
-      
-      animationFrame = requestAnimationFrame(animateDrain);
-      
-      return () => {
-        cancelAnimationFrame(animationFrame);
-        timeouts.forEach(clearTimeout);
-      };
-    }
-  }, [isStarting, isStopping, tool.port, tool.name, showNotification]);
-  
-  // Rotation animation for vinyl record when running
-  useEffect(() => {
-    let animationId;
-    
-    if (isRunning) {
-      const animate = () => {
-        setRotation(prev => (prev + 0.2) % 360);
-        animationId = requestAnimationFrame(animate);
-      };
-      
-      animationId = requestAnimationFrame(animate);
-    } else {
-      // Gradually slow down rotation when stopping
-      const slowDown = () => {
-        setRotation(prev => {
-          const newRotation = prev + 0.1;
-          if (newRotation > 360) {
-            return 0;
-          }
-          return newRotation;
-        });
-        
-        if (rotation > 0) {
-          animationId = requestAnimationFrame(slowDown);
-        }
-      };
-      
-      if (rotation > 0) {
-        animationId = requestAnimationFrame(slowDown);
-      }
-    }
-    
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
-  }, [isRunning, rotation]);
-  
-  // Helper function to start the app and handle errors
-  const startApp = async () => {
-    const result = await runApp(tool.id);
-    if (!result.success) {
-      setIsStarting(false);
-      setButtonState('run');
-      setBlobsVisible(false);
-      setFillPercentage(0);
-      showNotification(`Failed to start ${tool.name}: ${result.error}`, 'error');
-    }
-  };
-  
-  // Helper function to stop the app and handle errors
-  const finishStopApp = async () => {
-    const result = await stopApp(tool.id);
-    if (!result.success) {
-      setIsStopping(false);
-      setButtonState('stop');
-      showNotification(`Failed to stop ${tool.name}: ${result.error}`, 'error');
-    }
-  };
 
   const handleMouseMove = (e) => {
     if (!cardRef.current) return;
@@ -243,192 +71,196 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
     if (isStarting || isStopping) return; // Prevent actions while animating
     
     if (isRunning) {
-      // Start the stopping animation
+      // Start the stopping animation/state change
       setIsStopping(true);
-      setButtonState('draining');
-      // Actual stopApp call is handled in the useEffect after animation
+      setButtonState('draining'); // Indicate stopping process
+      
+      // Call stopApp directly - the UI will update based on context changes
+      const result = await stopApp(tool.id);
+      if (!result.success) {
+        // If stop failed, revert state
+        setIsStopping(false);
+        setButtonState('stop'); // Revert to 'stop' as it's still technically running
+        showNotification(`Failed to stop ${tool.name}: ${result.error}`, 'error');
+      } else {
+        // Stop succeeded, reset local state. isRunning will update via context.
+        setIsStopping(false);
+        setButtonState('run'); // Set to 'run' state ready for next action
+      }
     } else {
-      // Start the animation first
+      // Start the starting animation/state change
       setIsStarting(true);
-      setButtonState('starting');
-      // Actual runApp call is handled in the useEffect after animation
+      setButtonState('starting'); // Indicate starting process
+      
+      // Call runApp directly - UI updates based on context
+      const result = await runApp(tool.id);
+      if (!result.success) {
+        // If start failed, revert state
+        setIsStarting(false);
+        setButtonState('run');
+        showNotification(`Failed to start ${tool.name}: ${result.error}`, 'error');
+      } else {
+         // Start initiated, wait for context to confirm 'isRunning'
+         // We can potentially reset isStarting here, or let context handle it
+         // For now, reset isStarting after a short delay to allow transition
+         setTimeout(() => setIsStarting(false), 500); 
+      }
     }
   };
+
+  // Derived state for cleaner transition checks
+  const isTransitioning = isStarting || isStopping || buttonState === 'waiting';
 
   // Get the appropriate button style based on current state
   const getButtonStyle = () => {
-    if (buttonState === 'stop') {
-      return isDarkMode
-        ? 'bg-transparent' 
-        : 'bg-transparent';
-    } else if (buttonState === 'starting' || buttonState === 'draining' || buttonState === 'waiting') {
-      return isDarkMode
-        ? 'bg-transparent opacity-75' 
-        : 'bg-transparent opacity-75';
-    } else {
-      return isDarkMode
-        ? 'bg-transparent' 
-        : 'bg-transparent';
-    }
+    // Base style is transparent, specific styles applied within getButtonContent
+    return 'bg-transparent'; 
   };
 
-  // Get the button content based on current state
-  const getButtonContent = () => {    
+  // Get the button content based on current state (NEW POWER KNOB DESIGN)
+  const getButtonContent = () => {
+    const knobSize = 28; // Size of the knob in pixels
+    const plateSize = 40; // Size of the background plate
+    const rotationAngle = isRunning ? 135 : -135; // Rotation for ON/OFF
+
+    const knobVariants = {
+      idle: { scale: 1, boxShadow: isDarkMode ? '0px 2px 5px rgba(0, 0, 0, 0.4)' : '0px 2px 5px rgba(0, 0, 0, 0.2)' },
+      hover: { scale: 1.05, boxShadow: isDarkMode ? '0px 4px 10px rgba(0, 0, 0, 0.5)' : '0px 4px 10px rgba(0, 0, 0, 0.3)' },
+      tap: { scale: 0.95 }
+    };
+
+    const glowVariants = {
+      hidden: { opacity: 0, scale: 0.8 },
+      visible: {
+        opacity: [0, 0.7, 0.3, 0.7, 0], // Pulse effect
+        scale: [0.8, 1.1, 1, 1.1, 0.8],
+        transition: {
+          duration: 1.5,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }
+      }
+    };
+
     return (
-      <div className="relative flex items-center w-full justify-center">
-        {/* Control panel with vinyl disc */}
-        <div className="h-8 w-[68px] relative flex-shrink-0">
-          {/* Dark control panel background */}
-          <div className={`absolute inset-0 rounded-md border overflow-hidden ${
-            isDarkMode ? 'bg-[#1a1a1a] border-[#333]' : 'bg-[#e0e0e0] border-[#ccc]'
-          }`}>
-            {/* Subtle panel texture */}
-            <div className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: `
-                  repeating-linear-gradient(
-                    90deg,
-                    transparent,
-                    transparent 2px,
-                    ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 2px,
-                    ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 4px
-                  )
-                `
-              }}
-            ></div>
-            
-            {/* Status LED dot */}
-            <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full overflow-hidden">
-              <div 
-                className={`absolute inset-0 rounded-full transition-all duration-300
-                  ${isRunning 
-                    ? 'bg-[#bccc0f] opacity-100 shadow-[0_0_5px_rgba(188,204,15,0.7)]' 
-                    : 'bg-neutral-600 opacity-60'
-                  }
-                `}
-              ></div>
-            </div>
-            
-            {/* ON/OFF text */}
-            <div className="absolute top-2 right-2 text-[7px] font-bold font-mono">
-              <span className={`${isRunning ? 'text-[#bccc0f]' : isDarkMode ? 'text-[#bccc0f]' : 'text-[#666]'}`}>
-                {isRunning ? 'ON' : 'OFF'}
-              </span>
-            </div>
+      <div className="flex flex-col items-center justify-center w-full h-full">
+        {/* Power Knob Container */}
+        <div 
+          className="relative flex items-center justify-center cursor-pointer group"
+          style={{ width: plateSize, height: plateSize }}
+          onClick={!isTransitioning ? handleAction : undefined} // Prevent click during transition
+        >
+          {/* Background Plate */}
+          <div 
+            className={`absolute inset-0 rounded-full transition-colors duration-300
+              ${isDarkMode 
+                ? 'bg-gradient-to-br from-[#3a3a3a] to-[#1a1a1a] border border-[#444] shadow-inner' 
+                : 'bg-gradient-to-br from-[#f0f0f0] to-[#d0d0d0] border border-[#bbb] shadow-inner'
+              }`}
+          >
+            {/* Subtle Texture */}
+             <div className="absolute inset-0 rounded-full opacity-10" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 6 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M5 0h1L0 6V5zM6 5v1H5z'/%3E%3C/g%3E%3C/svg%3E")` }}></div>
           </div>
-          
-          {/* Vinyl disc */}
-          <motion.div 
-            className={`absolute top-1/2 left-[8px] -translate-y-1/2 w-6 h-6 z-10`}
-            animate={{ 
-              x: isRunning ? 22 : 0
+
+          {/* OFF Label */}
+          <span 
+            className={`absolute top-1/2 -translate-y-1/2 left-[-16px] text-[8px] font-mono font-bold transition-colors duration-300
+              ${!isRunning ? (isDarkMode ? 'text-[#bccc0f]' : 'text-red-600') : (isDarkMode ? 'text-gray-500' : 'text-gray-400')}
+            `}
+          >
+            OFF
+          </span>
+
+          {/* ON Label */}
+          <span 
+            className={`absolute top-1/2 -translate-y-1/2 right-[-14px] text-[8px] font-mono font-bold transition-colors duration-300
+              ${isRunning ? (isDarkMode ? 'text-[#bccc0f]' : 'text-green-600') : (isDarkMode ? 'text-gray-500' : 'text-gray-400')}
+            `}
+          >
+            ON
+          </span>
+
+          {/* Rotating Knob */}
+          <motion.div
+            className="relative z-10 rounded-full shadow-md"
+            style={{ 
+              width: knobSize, 
+              height: knobSize,
+              background: isDarkMode 
+                ? 'radial-gradient(circle at 70% 30%, #666, #333)' 
+                : 'radial-gradient(circle at 70% 30%, #e0e0e0, #a0a0a0)',
+              border: `1px solid ${isDarkMode ? '#555' : '#aaa'}`,
             }}
-            transition={{
-              x: { 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 25
-              }
+            variants={knobVariants}
+            initial="idle"
+            whileHover={!isTransitioning ? "hover" : "idle"}
+            whileTap={!isTransitioning ? "tap" : "idle"}
+            animate={{ 
+              rotate: rotationAngle, 
+              boxShadow: isTransitioning ? 'none' : (isDarkMode ? '0px 2px 5px rgba(0, 0, 0, 0.4)' : '0px 2px 5px rgba(0, 0, 0, 0.2)') 
+            }}
+            transition={{ 
+              rotate: { type: "spring", stiffness: 200, damping: 20 },
+              default: { duration: 0.15 } 
             }}
           >
-            {/* Vinyl disc with grooves */}
-            <motion.div 
-              className={`absolute inset-0 rounded-full overflow-hidden shadow-md ${
-                isDarkMode ? 'bg-[#222]' : 'bg-[#555]'
-              }`}
-              animate={{ 
-                rotate: isRunning ? 360 : 0
-              }}
-              transition={{
-                rotate: {
-                  duration: isRunning ? 3 : 0.5,
-                  ease: isRunning ? "linear" : "easeOut",
-                  repeat: isRunning ? Infinity : 0,
-                  repeatType: "loop"
-                }
-              }}
+            {/* Knob Indicator Dot */}
+            <div 
+              className="absolute top-[3px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+              style={{ background: isDarkMode ? '#bccc0f' : '#444' }}
+            ></div>
+             {/* Subtle center dimple */}
+            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-black/20' : 'bg-black/10'} shadow-inner`}></div>
+
+            {/* Pulsing Glow for Transition State */}
+            <motion.div
+              className="absolute inset-[-4px] rounded-full pointer-events-none"
               style={{
-                width: '24px',
-                height: '24px',
-                transform: `scale(1) ${isRunning ? 'rotate(360deg)' : 'rotate(0deg)'}`,
-                transformOrigin: 'center center'
+                border: `2px solid ${isDarkMode ? 'rgba(188, 204, 15, 0.7)' : 'rgba(100, 116, 139, 0.7)'}` , // Yellowish or grayish glow
+                boxShadow: `0 0 10px 2px ${isDarkMode ? 'rgba(188, 204, 15, 0.5)' : 'rgba(100, 116, 139, 0.5)'}`
               }}
-            >
-              {/* Grooves */}
-              <div 
-                className="absolute inset-0 rounded-full opacity-80"
-                style={{
-                  backgroundImage: `
-                    repeating-radial-gradient(
-                      circle at center,
-                      ${isDarkMode ? '#222' : '#555'} 0px,
-                      ${isDarkMode ? '#222' : '#555'} 1px,
-                      ${isDarkMode ? '#333' : '#777'} 1px,
-                      ${isDarkMode ? '#333' : '#777'} 2px
-                    )
-                  `
-                }}
-              ></div>
-              
-              {/* Center hole */}
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: '24px',
-                height: '24px',
-                marginLeft: '-12px',
-                marginTop: '-12px',
-                background: 'black',
-                border: '2px solid #444',
-                borderRadius: '50%',
-                transform: 'scale(1)',
-                transformOrigin: 'center center'
-              }}></div>
-              
-              {/* Label */}
-              <div 
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full"
-                style={{
-                  background: isRunning 
-                    ? 'radial-gradient(circle at 30% 30%, #bccc0f, #9aa50a)' 
-                    : 'radial-gradient(circle at 30% 30%, #999, #666)',
-                  boxShadow: isRunning ? '0 0 5px rgba(188,204,15,0.7)' : 'none'
-                }}
-              >
-                {/* Label detail */}
-                <div className="absolute inset-0 rounded-full flex items-center justify-center">
-                  <div 
-                    className={`w-1 h-[1px] ${isRunning ? 'bg-yellow-200' : 'bg-gray-300'} opacity-80`}
-                    style={{ transform: 'rotate(45deg)' }}
-                  ></div>
-                  <div 
-                    className={`w-1 h-[1px] ${isRunning ? 'bg-yellow-200' : 'bg-gray-300'} opacity-80`} 
-                    style={{ transform: 'rotate(-45deg)' }}
-                  ></div>
-                </div>
-              </div>
-            </motion.div>
+              variants={glowVariants}
+              initial="hidden"
+              animate={isTransitioning ? "visible" : "hidden"}
+            />
           </motion.div>
         </div>
-        
-        {/* Status text (only shown during transitions) */}
-        {(buttonState === 'starting' || buttonState === 'draining' || buttonState === 'waiting') && (
-          <div className="absolute right-4 flex items-center">
-            <motion.span 
-              className={`text-sm font-medium ${
-                isDarkMode 
-                  ? 'text-[#bccc0f]'
-                  : 'text-gray-700'
-              }`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 0.5, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            >
-              {buttonState === 'draining' ? 'Stopping...' : 'Starting...'}
-            </motion.span>
-          </div>
-        )}
+
+        {/* Status text below the knob => Replaced with Loading Dots */}
+        <div className="absolute bottom-[-14px] text-center w-full h-4 flex justify-center items-center"> {/* Increased bottom offset further */}
+          {/* Loading Dots Container - Animates visibility and staggers children */}
+          <motion.div
+            className="flex space-x-1"
+            initial="hidden"
+            animate={isTransitioning ? "visible" : "hidden"}
+            variants={{
+              visible: { 
+                opacity: 1, 
+                transition: { staggerChildren: 0.15 }
+              },
+              hidden: { opacity: 0 }
+            }}
+          >
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className={`w-1.5 h-1.5 rounded-full ${isDarkMode ? 'bg-[#bccc0f]' : 'bg-yellow-600'}`}
+                variants={{
+                  visible: {
+                    opacity: [0.4, 1, 0.4], // Blink effect
+                    scale: [0.8, 1, 0.8],
+                    transition: {
+                      duration: 1.2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }
+                  },
+                  hidden: { opacity: 0, scale: 0 }
+                }}
+              />
+            ))}
+          </motion.div>
+        </div>
       </div>
     );
   };
@@ -539,23 +371,13 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
             top: '-90px',
             left: '50%',
             marginLeft: '-90px',
-            backgroundImage: isDarkMode 
-              ? `repeating-radial-gradient(
-                  circle at center,
-                  rgba(80, 80, 80, 0.6),
-                  rgba(80, 80, 80, 0.6) 3px,
-                  transparent 3px,
-                  transparent 6px
-                )`
-              : `repeating-radial-gradient(
-                  circle at center,
-                  rgba(180, 180, 180, 0.3),
-                  rgba(180, 180, 180, 0.3) 3px,
-                  transparent 3px,
-                  transparent 6px
-                )`,
-            rotate: isRunning ? `${rotation}deg` : '0deg',
-            transition: isRunning ? 'none' : 'rotate 0.5s ease-out',
+            backgroundImage: `repeating-radial-gradient(
+                circle at center,
+                ${isDarkMode ? 'rgba(80, 80, 80, 0.6)' : 'rgba(180, 180, 180, 0.3)'} 0px,
+                ${isDarkMode ? 'rgba(80, 80, 80, 0.6)' : 'rgba(180, 180, 180, 0.3)'} 3px,
+                transparent 3px,
+                transparent 6px
+              )`,
             border: isDarkMode 
               ? '4px solid rgba(30, 30, 30, 0.8)' 
               : '4px solid rgba(180, 180, 180, 0.3)',
@@ -721,24 +543,20 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
 
           {/* Action button */}
           <div className="mt-2 px-2">
-            <motion.button
-              layout="position"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleAction}
-              disabled={isStarting || isStopping}
+            <div
               className={`
                 w-full h-[40px] px-4 rounded-lg relative
+                flex items-center justify-center
                 transition-all duration-200
                 ${getButtonStyle()}
-                ${(isStarting || isStopping) ? 'cursor-wait' : 'cursor-pointer'}
+                ${isTransitioning ? 'cursor-wait' : ''}
               `}
               style={{
-                boxShadow: isDarkMode ? '0 0 8px rgba(188,204,15,0.2)' : '0 0 8px rgba(0,0,0,0.1)'
+                boxShadow: isDarkMode ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 2px rgba(0,0,0,0.1)'
               }}
             >
               {getButtonContent()}
-            </motion.button>
+            </div>
           </div>
         </div>
       </div>
