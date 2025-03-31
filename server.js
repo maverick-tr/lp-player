@@ -6,6 +6,7 @@ import cors from 'cors';
 import { exec } from 'child_process';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
+import os from 'os'; // Add os module for system monitoring
 
 // Get current file directory (ESM replacement for __dirname)
 const __filename = fileURLToPath(import.meta.url);
@@ -44,6 +45,11 @@ const wss = new WebSocketServer({
 const runningProcesses = new Map();
 // WebSocket clients map
 const clients = new Map();
+
+// System monitoring data
+let lastCpuUsage = null;
+let lastCpuTimes = null;
+const systemMonitoringClients = new Set();
 
 // Middleware
 app.use(cors({
@@ -97,6 +103,21 @@ wss.on('connection', (ws, req) => {
       } else if (data.type === 'ping') {
         // Respond to client ping with pong
         ws.send(JSON.stringify({ type: 'pong' }));
+      } else if (data.type === 'subscribe-system-stats') {
+        // Subscribe client to system stats
+        systemMonitoringClients.add(clientId);
+        console.log(`Client ${clientId} subscribed to system stats`);
+        
+        // Send initial system stats
+        const initialStats = getSystemStats();
+        ws.send(JSON.stringify({
+          type: 'system-stats',
+          ...initialStats
+        }));
+      } else if (data.type === 'unsubscribe-system-stats') {
+        // Unsubscribe client from system stats
+        systemMonitoringClients.delete(clientId);
+        console.log(`Client ${clientId} unsubscribed from system stats`);
       }
     } catch (e) {
       console.error(`Error processing WebSocket message from client ${clientId}:`, e);
@@ -105,6 +126,7 @@ wss.on('connection', (ws, req) => {
   
   ws.on('close', () => {
     clients.delete(clientId);
+    systemMonitoringClients.delete(clientId);
     console.log(`WebSocket client disconnected: ${clientId}`);
   });
   
@@ -136,6 +158,133 @@ const pingInterval = setInterval(() => {
 
 // Clean up interval on server close
 wss.on('close', () => {
+  clearInterval(pingInterval);
+});
+
+// Function to calculate CPU usage percentage
+function calculateCpuUsage() {
+  try {
+    const cpus = os.cpus();
+    
+    if (!cpus || cpus.length === 0) {
+      return { usage: 0, error: 'No CPU information available' };
+    }
+    
+    // Initialize data structures for first run
+    if (!lastCpuTimes) {
+      lastCpuTimes = cpus.map(cpu => {
+        const times = cpu.times;
+        return {
+          idle: times.idle,
+          total: times.user + times.nice + times.sys + times.idle + times.irq
+        };
+      });
+      return { usage: 0 };
+    }
+    
+    // Calculate CPU usage across all cores
+    let totalUsage = 0;
+    
+    for (let i = 0; i < cpus.length; i++) {
+      const cpu = cpus[i];
+      const times = cpu.times;
+      
+      const idle = times.idle;
+      const total = times.user + times.nice + times.sys + times.idle + times.irq;
+      
+      // Get last measurements
+      const lastMeasurement = lastCpuTimes[i];
+      
+      // Calculate deltas
+      const idleDelta = idle - lastMeasurement.idle;
+      const totalDelta = total - lastMeasurement.total;
+      
+      // Update last measurements
+      lastCpuTimes[i] = { idle, total };
+      
+      // Calculate core usage and add to total
+      const coreUsage = 100 - (idleDelta / totalDelta * 100);
+      totalUsage += coreUsage;
+    }
+    
+    // Get average usage across all cores
+    const averageUsage = totalUsage / cpus.length;
+    
+    // Ensure it's within valid range
+    return { usage: Math.min(100, Math.max(0, Math.round(averageUsage))) };
+  } catch (error) {
+    console.error('Error calculating CPU usage:', error);
+    return { usage: 0, error: error.message };
+  }
+}
+
+// Function to get memory usage percentage
+function getMemoryUsage() {
+  try {
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const usedMemory = totalMemory - freeMemory;
+    
+    const memoryUsagePercent = (usedMemory / totalMemory) * 100;
+    return { usage: Math.round(memoryUsagePercent) };
+  } catch (error) {
+    console.error('Error calculating memory usage:', error);
+    return { usage: 0, error: error.message };
+  }
+}
+
+// Function to get combined system stats
+function getSystemStats() {
+  const cpuStats = calculateCpuUsage();
+  const memoryStats = getMemoryUsage();
+  
+  return {
+    cpu: cpuStats.usage,
+    memory: memoryStats.usage,
+    timestamp: Date.now()
+  };
+}
+
+// Function to broadcast system stats to subscribed clients
+function broadcastSystemStats(stats) {
+  let clientCount = 0;
+  
+  for (const clientId of systemMonitoringClients) {
+    const client = clients.get(clientId);
+    
+    if (client && client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(JSON.stringify({
+          type: 'system-stats',
+          ...stats
+        }));
+        clientCount++;
+      } catch (error) {
+        console.error(`Error sending system stats to client ${clientId}:`, error);
+        systemMonitoringClients.delete(clientId);
+      }
+    } else {
+      // Clean up if client is no longer connected
+      systemMonitoringClients.delete(clientId);
+    }
+  }
+  
+  if (clientCount > 0) {
+    console.log(`Broadcast system stats to ${clientCount} clients. CPU: ${stats.cpu}%, Memory: ${stats.memory}%`);
+  }
+}
+
+// Set up interval to collect and broadcast system stats
+const systemStatsInterval = setInterval(() => {
+  if (systemMonitoringClients.size > 0) {
+    const stats = getSystemStats();
+    broadcastSystemStats(stats);
+  }
+}, 2000); // Update every 2 seconds, matching the frontend update interval
+
+// Clean up interval on server close
+server.on('close', () => {
+  clearInterval(systemStatsInterval);
   clearInterval(pingInterval);
 });
 
@@ -475,11 +624,23 @@ app.post('/api/detect-environment', async (req, res) => {
   }
 });
 
+// API endpoint for system stats
+app.get('/api/system-stats', (req, res) => {
+  try {
+    const stats = getSystemStats();
+    res.json(stats);
+  } catch (error) {
+    console.error('Error getting system stats:', error);
+    res.status(500).json({ error: 'Failed to get system stats' });
+  }
+});
+
 // Start the server
 server.listen(PORT, HOST, () => {
   console.log(`Server running at http://${HOST}:${PORT}`);
   console.log('Available endpoints:');
   console.log('  POST /api/tools/run - Run a tool');
   console.log('  POST /api/tools/stop - Stop a tool');
+  console.log('  GET /api/system-stats - Get system stats');
   console.log(`  WebSocket server - ws://${HOST}:${PORT}`);
 }); 

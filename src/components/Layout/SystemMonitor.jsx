@@ -8,41 +8,146 @@ const SystemMonitor = memo(function SystemMonitor({ name, type }) {
   const [usage, setUsage] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const intervalRef = useRef(null);
+  const socketRef = useRef(null);
   
   useEffect(() => {
-    // Cleanup function to handle unmounting
-    return () => {
+    // Subscribe to real system stats via WebSocket
+    const setupSystemStatsSocket = () => {
+      // Use the same hostname/port as the current page
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.hostname}:4243`;
+      
+      try {
+        // Close existing socket if any
+        if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
+          socketRef.current.close();
+        }
+        
+        // Create new WebSocket connection
+        const socket = new WebSocket(wsUrl);
+        socketRef.current = socket;
+        
+        socket.onopen = () => {
+          console.log('Connected to system stats WebSocket');
+          
+          // Subscribe to system stats
+          socket.send(JSON.stringify({
+            type: 'subscribe-system-stats'
+          }));
+        };
+        
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'system-stats') {
+              setIsLoading(false);
+              
+              // Update the appropriate stat based on type (cpu or memory)
+              if (type === 'cpu' && data.cpu !== undefined) {
+                setUsage(data.cpu);
+              } else if (type === 'memory' && data.memory !== undefined) {
+                setUsage(data.memory);
+              }
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
+        
+        socket.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          // Fall back to HTTP API if WebSocket fails
+          fetchSystemStats();
+        };
+        
+        socket.onclose = () => {
+          console.log('System stats WebSocket closed');
+          // Try to reconnect after a delay
+          setTimeout(setupSystemStatsSocket, 5000);
+        };
+      } catch (error) {
+        console.error('Failed to connect to WebSocket:', error);
+        // Fall back to HTTP API if WebSocket fails
+        fetchSystemStats();
+      }
+    };
+    
+    // Fetch system stats from API as fallback
+    const fetchSystemStats = async () => {
+      try {
+        // If WebSocket failed, set up an interval to fetch stats via HTTP API
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+        
+        const fetchData = async () => {
+          try {
+            const response = await fetch(`http://${window.location.hostname}:4243/api/system-stats`);
+            
+            if (response.ok) {
+              const data = await response.json();
+              setIsLoading(false);
+              
+              // Update the appropriate stat based on type
+              if (type === 'cpu') {
+                setUsage(data.cpu);
+              } else if (type === 'memory') {
+                setUsage(data.memory);
+              }
+            }
+          } catch (error) {
+            console.error('Failed to fetch system stats:', error);
+          }
+        };
+        
+        // Fetch immediately then set up interval
+        await fetchData();
+        intervalRef.current = setInterval(fetchData, 2000);
+      } catch (error) {
+        console.error('Failed to fetch system stats:', error);
+        
+        // As last resort, fallback to random data for demo purposes
+        fallbackToRandomData();
+      }
+    };
+    
+    // Fallback to random data as last resort
+    const fallbackToRandomData = () => {
+      console.warn('Falling back to random system stats data for demo purposes');
+      
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-    };
-  }, []);
-  
-  useEffect(() => {
-    // Single function to update stats
-    const updateStats = () => {
-      try {
-        // For this demo, we'll simulate random usage values
+      
+      // Generate random stats
+      const updateRandomStats = () => {
         setIsLoading(false);
-        
-        // Random usage value for demonstration
         const randomUsage = Math.floor(Math.random() * 100);
         setUsage(randomUsage);
-      } catch (error) {
-        console.error('Failed to fetch system stats:', error);
-        setIsLoading(false);
-        setUsage(0);
-      }
+      };
+      
+      updateRandomStats();
+      intervalRef.current = setInterval(updateRandomStats, 2000);
     };
-
-    // Run once immediately
-    updateStats();
     
-    // Setup interval using ref to prevent unnecessary effect reruns
-    intervalRef.current = setInterval(updateStats, 2000);
+    // Start with WebSocket connection
+    setupSystemStatsSocket();
     
-    // Clean up on unmount or when type changes
+    // Cleanup function to handle unmounting
     return () => {
+      // Close WebSocket
+      if (socketRef.current) {
+        // Unsubscribe before closing
+        if (socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({
+            type: 'unsubscribe-system-stats'
+          }));
+        }
+        socketRef.current.close();
+      }
+      
+      // Clear interval
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }

@@ -120,7 +120,7 @@
       "name": "Orpheus Fast TTS",
       "description": "Orpheus models Fast TTS Api",
       "url": "https://fluxgym.luxson.uk",
-      "logoPath": "images/tts.svg",
+      "logoPath": "data:image/svg+xml;charset=UTF-8,%0A%20%20%20%20%20%20%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%20width%3D%2256%22%20height%3D%2256%22%3E%0A%20%20%20%20%20%20%20%20%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2245%22%20fill%3D%22none%22%20stroke%3D%22%233b82f6%22%20stroke-width%3D%225%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2220%22%20fill%3D%22none%22%20stroke%3D%22%233b82f6%22%20stroke-width%3D%223%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%225%22%20fill%3D%22%233b82f6%22%20%2F%3E%0A%20%20%20%20%20%20%20%20%3Cline%20x1%3D%2250%22%20y1%3D%225%22%20x2%3D%2250%22%20y2%3D%2220%22%20stroke%3D%22%233b82f6%22%20stroke-width%3D%222%22%20%2F%3E%0A%20%20%20%20%20%20%3C%2Fsvg%3E%0A%20%20%20%20",
       "requiresCheckout": true,
       "maxCheckouts": 1,
       "category": "audio",
