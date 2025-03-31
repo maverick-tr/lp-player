@@ -18,12 +18,12 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
   const [buttonState, setButtonState] = useState(isRunning ? 'stop' : 'run');
 
   const firstGlowColor = isRunning
-    ? (isDarkMode ? 'rgba(74,222,128,0.2)' : 'rgba(74,222,128,0.2)')
-    : (isDarkMode ? 'rgba(188,204,15,0.15)' : 'rgba(188,204,15,0.12)');
+    ? (isDarkMode ? 'rgba(135, 203, 93, 0.2)' : 'rgba(135, 203, 93, 0.4)')
+    : (isDarkMode ? 'rgba(188,204,15,0.15)' : 'rgba(188,204,15, 0.22)');
 
   const secondGlowColor = isRunning
-    ? (isDarkMode ? 'rgba(74,222,128,0.1)' : 'rgba(74,222,128,0.1)')
-    : (isDarkMode ? 'rgba(188,204,15,0.05)' : 'rgba(188,204,15,0.06)');
+    ? (isDarkMode ? 'rgba(135, 203, 93,0.1)' : 'rgba(135, 203, 93, 0.2)')
+    : (isDarkMode ? 'rgba(188,204,15,0.05)' : 'rgba(188,204,15,0.16)');
 
   // Synchronize buttonState with app running state
   useEffect(() => {
