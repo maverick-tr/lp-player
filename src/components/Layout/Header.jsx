@@ -67,7 +67,7 @@ const Header = memo(function Header() {
           <div className="flex justify-center flex-1">
             <motion.img 
               src="/logo.png?v=1.0.0" 
-              alt="LPP - Local Project Player" 
+              alt="LP Player - Local Project Player" 
               className="h-24 w-auto object-contain"
               initial={{ scale: 1, rotate: 0 }}
               animate={isSpinning ? {

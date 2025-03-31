@@ -1,6 +1,6 @@
 {
-  "name": "LPP - Local Project Player",
-  "short_name": "LPP",
+  "name": "LP Player - Local Project Player",
+  "short_name": "LP Player",
   "description": "Manage your local projects easily",
   "start_url": "/?v=1.0.0",
   "display": "standalone",

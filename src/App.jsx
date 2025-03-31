@@ -57,7 +57,7 @@ const AppContent = memo(function AppContent() {
 });
 
 function App() {
-  document.title = "LPP - Local Project Player";
+  document.title = "LP Player - Local Project Player";
   
   return (
     <ThemeProvider>

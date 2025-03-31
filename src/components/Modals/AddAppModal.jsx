@@ -265,7 +265,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
 
     try {
       // Make an API call to check if various environment files exist
-      const response = await fetch(`http://${window.location.hostname}:3015/api/detect-environment`, {
+      const response = await fetch(`http://${window.location.hostname}:4243/api/detect-environment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

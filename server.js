@@ -12,7 +12,24 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3015;
+// Parse command line arguments for port
+const args = process.argv.slice(2);
+let PORT = process.env.PORT || 4242;
+let HOST = process.env.HOST || 'localhost';
+
+// Parse command line arguments
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--port' && i + 1 < args.length) {
+    PORT = parseInt(args[i + 1], 10);
+    console.log(`Using port from command line argument: ${PORT}`);
+    i++; // Skip the next argument which is the port number
+  } else if (args[i] === '--host' && i + 1 < args.length) {
+    HOST = args[i + 1];
+    console.log(`Using host from command line argument: ${HOST}`);
+    i++; // Skip the next argument which is the host
+  }
+}
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ 
   server,
@@ -459,10 +476,10 @@ app.post('/api/detect-environment', async (req, res) => {
 });
 
 // Start the server
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running at http://0.0.0.0:${PORT}`);
-  console.log(`Available endpoints:`);
-  console.log(`  POST /api/tools/run - Run a tool`);
-  console.log(`  POST /api/tools/stop - Stop a tool`);
-  console.log(`  WebSocket server - ws://0.0.0.0:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`Server running at http://${HOST}:${PORT}`);
+  console.log('Available endpoints:');
+  console.log('  POST /api/tools/run - Run a tool');
+  console.log('  POST /api/tools/stop - Stop a tool');
+  console.log(`  WebSocket server - ws://${HOST}:${PORT}`);
 }); 
