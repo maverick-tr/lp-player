@@ -8,23 +8,41 @@ import { useTerminal } from '../../hooks/useTerminal';
 const smokeStyles = `
   .smoke {
     position: absolute;
-    width: 250px;
-    height: 250px;
-    background: url('https://res.cloudinary.com/da51wkm4r/image/upload/v1461143297/title/smoke.png') no-repeat;
     background-size: contain;
-    opacity: 0;
+    background-repeat: no-repeat;
     pointer-events: none;
     z-index: 999;
+    will-change: transform, opacity;
+    transform-origin: center bottom;
+    opacity: 0;
   }
 
-  @keyframes smokeAppearFade {
-    0% { opacity: 0; }
-    10% { opacity: 0.4; }
-    100% { opacity: 0; }
+  .smoke-1 { background-image: url('https://res.cloudinary.com/da51wkm4r/image/upload/v1461143297/title/smoke.png'); }
+  .smoke-2 { background-image: url('https://res.cloudinary.com/daqwsgmx6/image/upload/v1718841063/smoke2_rhuxhw.png'); }
+  .smoke-3 { background-image: url('https://res.cloudinary.com/daqwsgmx6/image/upload/v1718841063/smoke3_buxe4f.png'); }
+  .smoke-4 { background-image: url('https://res.cloudinary.com/daqwsgmx6/image/upload/v1718841063/smoke4_dphicc.png'); }
+
+  @keyframes smokeRise {
+    0% { 
+      opacity: 0.05; 
+      transform: translateY(0) scale(1) rotate(0deg);
+    }
+    20% { 
+      opacity: 0.5; 
+    }
+    60% { 
+      opacity: 0.3; 
+    }
+    100% { 
+      opacity: 0; 
+      transform: translateY(-100px) scale(1.8) rotate(var(--rotation));
+    }
   }
 
   .smokeAnimation {
-    animation: smokeAppearFade 4s ease-out forwards;
+    animation-name: smokeRise;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
   }
 `;
 
@@ -191,7 +209,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
   const createSmokeEffect = () => {
     if (terminaElRef.current) {
       const terminalRect = terminaElRef.current.getBoundingClientRect();
-      const smokeCount = isMinimized ? 20 : 15;
+      const smokeCount = isMinimized ? 30 : 25;
 
       // Create a viewport for smoke if it doesn't exist
       if (!viewportRef.current) {
@@ -208,31 +226,60 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
         viewportRef.current = viewport;
       }
 
-      // Get the vertical spread area - for minimized state, spread wider
-      const verticalSpread = isMinimized ? 100 : 50;
-      
-      // Create all smoke elements at once
-      for (let i = 0; i < smokeCount; i++) {
+      // Create smoke elements in staggered fashion
+      const createSmokeParticle = (index) => {
         if (viewportRef.current) {
           const smoke = document.createElement('div');
-          smoke.className = 'smoke smokeAnimation';
           
-          // Position the smoke - for minimized view, distribute more widely
-          smoke.style.left = `${terminalRect.left - 50 + Math.random() * (terminalRect.width + 100)}px`;
-          smoke.style.top = `${terminalRect.top - 20 + Math.random() * verticalSpread}px`;
+          // Randomly select a smoke image variant (1-4)
+          const smokeVariant = Math.floor(Math.random() * 4) + 1;
+          smoke.className = `smoke smoke-${smokeVariant}`;
           
-          // Randomize size - larger for minimized view for better visibility
-          const minSize = isMinimized ? 30 : 40;
-          const maxSize = isMinimized ? 90 : 100;
-          const size = minSize + Math.random() * (maxSize - minSize);
+          // Calculate particle position - more concentrated along terminal edges and bottom
+          let posX, posY;
+          const edgeProbability = 0.7; // 70% chance to spawn on edges
+          
+          if (Math.random() < edgeProbability) {
+            // Position along edges
+            if (Math.random() < 0.5) {
+              // Left or right edge
+              posX = Math.random() < 0.5 ? 
+                terminalRect.left - 20 + Math.random() * 40 : 
+                terminalRect.right - 40 + Math.random() * 40;
+              posY = terminalRect.top + Math.random() * terminalRect.height;
+            } else {
+              // Top or bottom edge (more from bottom)
+              posX = terminalRect.left + Math.random() * terminalRect.width;
+              posY = Math.random() < 0.7 ? 
+                terminalRect.bottom - 30 + Math.random() * 20 : 
+                terminalRect.top - 20 + Math.random() * 40;
+            }
+          } else {
+            // Random position around terminal
+            posX = terminalRect.left - 40 + Math.random() * (terminalRect.width + 80);
+            posY = terminalRect.top - 30 + Math.random() * (terminalRect.height + 60);
+          }
+          
+          smoke.style.left = `${posX}px`;
+          smoke.style.top = `${posY}px`;
+          
+          // Randomize size based on position
+          const baseSize = isMinimized ? 100 : 120;
+          const sizeVariation = isMinimized ? 60 : 80;
+          const size = baseSize + Math.random() * sizeVariation;
+          
           smoke.style.width = `${size}px`;
           smoke.style.height = `${size}px`;
           
-          // For minimized view, increase initial opacity for better visibility
-          if (isMinimized) {
-            smoke.style.opacity = '0.15';  // This will be modified by the animation
-          }
+          // Set custom animation properties
+          const animationDuration = 3000 + Math.random() * 2000;
+          const rotation = -20 + Math.random() * 40; // -20° to +20°
           
+          smoke.style.setProperty('--rotation', `${rotation}deg`);
+          smoke.style.animation = `smokeRise ${animationDuration}ms ease-out forwards`;
+          smoke.style.filter = `blur(${1 + Math.random() * 2}px)`;
+          
+          // Add to viewport with slight delay for staggered effect
           viewportRef.current.appendChild(smoke);
           
           // Remove smoke element after animation
@@ -246,8 +293,13 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
               document.body.removeChild(viewportRef.current);
               viewportRef.current = null;
             }
-          }, 4000); // Use same duration for both minimized and maximized
+          }, animationDuration + 100);
         }
+      };
+      
+      // Create smoke particles with staggered timing
+      for (let i = 0; i < smokeCount; i++) {
+        setTimeout(() => createSmokeParticle(i), i * 50);
       }
     }
   };
@@ -259,11 +311,11 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
     setIsClosing(true);
     createSmokeEffect();
     
-    // Delay the actual close to allow smoke animation to run for 1 second before closing
+    // Delay the actual close to allow more time for smoke animation
     setTimeout(() => {
       onClose();
       setIsClosing(false);
-    }, 1000);
+    }, 1500);
   };
 
   // Handle expanding/minimizing the terminal

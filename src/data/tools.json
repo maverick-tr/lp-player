@@ -154,7 +154,7 @@
         "Frontend",
         "AI"
       ],
-      "port": "",
+      "port": "3000",
       "execution": {
         "rootPath": "/Users/st/Documents/Projects/screenshot-to-code",
         "environment": {
@@ -165,6 +165,29 @@
         "error": null
       },
       "id": "9"
+    },
+    {
+      "name": "Motia",
+      "description": "AI Agent Framework for Software Engineers",
+      "logoPath": "images/motia.svg",
+      "category": "developer-agents",
+      "tags": [
+        "AI Agent",
+        "AI",
+        "development",
+        "code"
+      ],
+      "port": "3000",
+      "execution": {
+        "rootPath": "/Users/st/Documents/Projects/motia/motia-examples/examples/conversation-analyzer-with-vision/",
+        "environment": {
+          "activationCommand": ""
+        },
+        "command": "pnpm run dev",
+        "isRunning": false,
+        "error": null
+      },
+      "id": "10"
     }
   ]
 }

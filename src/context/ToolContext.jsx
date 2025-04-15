@@ -411,7 +411,28 @@ export function ToolProvider({ children }) {
       stopApp,
       addApp,
       updateApp,
-      deleteApp
+      deleteApp,
+      updateToolRunningStatus: (toolId, isRunning) => {
+        const updatedTools = tools.map(tool => 
+          tool.id === toolId 
+            ? { ...tool, execution: { ...tool.execution, isRunning } } 
+            : tool
+        );
+        
+        setTools(updatedTools);
+        setFilteredTools(prev => 
+          prev.map(tool => 
+            tool.id === toolId 
+              ? { ...tool, execution: { ...tool.execution, isRunning } } 
+              : tool
+          )
+        );
+        
+        // Update global cache
+        globalToolsCache = updatedTools;
+        
+        persistTools(updatedTools);
+      }
     }}>
       {children}
     </ToolContext.Provider>
