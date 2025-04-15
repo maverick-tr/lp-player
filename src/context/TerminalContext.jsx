@@ -163,12 +163,13 @@ export function TerminalProvider({ children }) {
     // if a tool is still running
     const anyToolRunning = tools.some(t => t.execution && t.execution.isRunning);
     
-    if (!anyToolRunning) {
-      setActiveToolId(null);
-      setActiveToolName('');
-      setIsTerminalOpen(false);
-    }
-    
+    // REMOVE or COMMENT OUT this block to prevent immediate close:
+    // if (!anyToolRunning) {
+    //   setActiveToolId(null);
+    //   setActiveToolName('');
+    //   setIsTerminalOpen(false);
+    // }
+
     // Always clear terminal output on refresh for a clean state
     setTerminalOutput([]);
     
@@ -203,7 +204,7 @@ export function TerminalProvider({ children }) {
         ws.close();
       }
     };
-  }, [initWebSocket]);
+  }, [initWebSocket, tools]);
 
   // Function to subscribe to a tool's output
   const subscribeToToolOutput = (toolId) => {
@@ -304,9 +305,8 @@ export function TerminalProvider({ children }) {
 
   // Function to close the terminal
   const closeTerminal = () => {
-    console.log('Closing terminal');
+    console.log('closeTerminal called');
     setIsTerminalOpen(false);
-    // Reset the minimized state for next time
     setIsTerminalMinimized(true);
   };
 

@@ -166,23 +166,27 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
   // Handle the actual countdown timer
   useEffect(() => {
     if (autoCloseCountdown === null) return;
-    
-    console.log(`Countdown: ${autoCloseCountdown}`);
-    
-    // Close when countdown reaches 0
+
+    // Start smoke effect when countdown reaches 2
+    if (autoCloseCountdown === 2) {
+      console.log('Starting smoke effect at countdown 2');
+      createSmokeEffect();
+    }
+
+    // Close immediately when countdown reaches 0
     if (autoCloseCountdown <= 0) {
-      console.log('Closing terminal');
-      handleClose();
+      console.log('Countdown reached 0, closing immediately');
+      onClose();
       return;
     }
-    
+
     // Decrement every second
     const timer = setTimeout(() => {
       setAutoCloseCountdown(prev => prev - 1);
     }, 1000);
-    
+
     return () => clearTimeout(timer);
-  }, [autoCloseCountdown]);
+  }, [autoCloseCountdown, onClose]);
 
   // Get the latest output line for summary
   const getOutputSummary = () => {
@@ -209,7 +213,8 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
   const createSmokeEffect = () => {
     if (terminaElRef.current) {
       const terminalRect = terminaElRef.current.getBoundingClientRect();
-      const smokeCount = isMinimized ? 30 : 25;
+      // Increase smoke count for more visibility
+      const smokeCount = isMinimized ? 40 : 32;
 
       // Create a viewport for smoke if it doesn't exist
       if (!viewportRef.current) {
@@ -230,65 +235,49 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
       const createSmokeParticle = (index) => {
         if (viewportRef.current) {
           const smoke = document.createElement('div');
-          
           // Randomly select a smoke image variant (1-4)
           const smokeVariant = Math.floor(Math.random() * 4) + 1;
           smoke.className = `smoke smoke-${smokeVariant}`;
-          
           // Calculate particle position - more concentrated along terminal edges and bottom
           let posX, posY;
-          const edgeProbability = 0.7; // 70% chance to spawn on edges
-          
+          const edgeProbability = 0.7;
           if (Math.random() < edgeProbability) {
-            // Position along edges
             if (Math.random() < 0.5) {
-              // Left or right edge
               posX = Math.random() < 0.5 ? 
                 terminalRect.left - 20 + Math.random() * 40 : 
                 terminalRect.right - 40 + Math.random() * 40;
               posY = terminalRect.top + Math.random() * terminalRect.height;
             } else {
-              // Top or bottom edge (more from bottom)
               posX = terminalRect.left + Math.random() * terminalRect.width;
               posY = Math.random() < 0.7 ? 
                 terminalRect.bottom - 30 + Math.random() * 20 : 
                 terminalRect.top - 20 + Math.random() * 40;
             }
           } else {
-            // Random position around terminal
             posX = terminalRect.left - 40 + Math.random() * (terminalRect.width + 80);
             posY = terminalRect.top - 30 + Math.random() * (terminalRect.height + 60);
           }
-          
           smoke.style.left = `${posX}px`;
           smoke.style.top = `${posY}px`;
-          
           // Randomize size based on position
-          const baseSize = isMinimized ? 100 : 120;
-          const sizeVariation = isMinimized ? 60 : 80;
+          const baseSize = isMinimized ? 110 : 140;
+          const sizeVariation = isMinimized ? 70 : 90;
           const size = baseSize + Math.random() * sizeVariation;
-          
           smoke.style.width = `${size}px`;
           smoke.style.height = `${size}px`;
-          
           // Set custom animation properties
-          const animationDuration = 3000 + Math.random() * 2000;
-          const rotation = -20 + Math.random() * 40; // -20° to +20°
-          
+          const animationDuration = 1800 + Math.random() * 900;
+          const rotation = -20 + Math.random() * 40;
           smoke.style.setProperty('--rotation', `${rotation}deg`);
           smoke.style.animation = `smokeRise ${animationDuration}ms ease-out forwards`;
           smoke.style.filter = `blur(${1 + Math.random() * 2}px)`;
-          
-          // Add to viewport with slight delay for staggered effect
+          // Make smoke more visible
+          smoke.style.opacity = `${0.18 + Math.random() * 0.22}`;
           viewportRef.current.appendChild(smoke);
-          
-          // Remove smoke element after animation
           setTimeout(() => {
             if (smoke && viewportRef.current && viewportRef.current.contains(smoke)) {
               viewportRef.current.removeChild(smoke);
             }
-            
-            // Remove viewport if no smoke elements left
             if (viewportRef.current && viewportRef.current.childNodes.length === 0) {
               document.body.removeChild(viewportRef.current);
               viewportRef.current = null;
@@ -296,26 +285,24 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
           }, animationDuration + 100);
         }
       };
-      
-      // Create smoke particles with staggered timing
       for (let i = 0; i < smokeCount; i++) {
-        setTimeout(() => createSmokeParticle(i), i * 50);
+        setTimeout(() => createSmokeParticle(i), i * 30);
       }
     }
   };
 
   // Custom close handler to trigger smoke effect before closing
   const handleClose = () => {
-    if (isClosing) return;
+    console.log('Handle close clicked');
     
-    setIsClosing(true);
+    // Create smoke effect first
     createSmokeEffect();
     
-    // Delay the actual close to allow more time for smoke animation
+    // Then close the terminal after a delay to allow smoke to be seen
     setTimeout(() => {
+      console.log('Calling onClose from TerminalWindow');
       onClose();
-      setIsClosing(false);
-    }, 1500);
+    }, 1200);
   };
 
   // Handle expanding/minimizing the terminal
