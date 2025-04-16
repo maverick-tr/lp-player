@@ -94,10 +94,25 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
 
   // Set active tool tab when a new tool starts
   useEffect(() => {
+    // Log currently active tools for debugging
+    console.log('Active tools updated:', activeTools.map(t => t.name));
+    console.log('Current active tab:', activeToolTab);
+    
+    // If the current tool exists and is running, keep it selected
     if (toolName && activeTools.some(tool => tool.name === toolName)) {
+      console.log(`Current tool ${toolName} is active, keeping as selected tab`);
       setActiveToolTab(toolName);
-    } else if (activeTools.length > 0 && (!activeToolTab || !activeTools.some(tool => tool.name === activeToolTab))) {
-      setActiveToolTab(activeTools[0].name);
+    } 
+    // If there are running tools but current tab is not running or not set, select first running tool
+    else if (activeTools.length > 0 && (!activeToolTab || !activeTools.some(tool => tool.name === activeToolTab))) {
+      const newActiveTab = activeTools[0].name;
+      console.log(`Setting active tab to first running tool: ${newActiveTab}`);
+      setActiveToolTab(newActiveTab);
+    }
+    // If no running tools, keep current tab for reference if it exists (might be stopping)
+    else if (activeTools.length === 0 && activeToolTab) {
+      console.log(`No running tools, keeping last tab ${activeToolTab} visible for reference`);
+      // Don't change the tab, keep showing the last active tool output
     }
   }, [toolName, activeTools, activeToolTab]);
 
@@ -329,7 +344,7 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
 
   return (
     <>
-      <AnimatePresence onExitComplete={() => console.log('Exit animation complete')}>
+      <AnimatePresence mode="wait" onExitComplete={() => console.log('Terminal exit animation complete')}>
         {isOpen && (
           <motion.div
             ref={terminaElRef}

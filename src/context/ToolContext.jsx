@@ -202,8 +202,16 @@ export function ToolProvider({ children }) {
       
       // Trigger terminal window opening for this toolId
       // We'll publish a custom event that the TerminalContext will listen for
+      console.log(`Dispatching open-terminal event for tool ${toolId}`);
       const terminalEvent = new CustomEvent('open-terminal', { detail: { toolId } });
       window.dispatchEvent(terminalEvent);
+      
+      // Add a backup event dispatch in case the first one wasn't caught
+      setTimeout(() => {
+        console.log(`Dispatching backup open-terminal event for tool ${toolId}`);
+        const backupEvent = new CustomEvent('open-terminal', { detail: { toolId } });
+        window.dispatchEvent(backupEvent);
+      }, 500);
       
       // Actually execute the command
       try {
@@ -305,20 +313,30 @@ export function ToolProvider({ children }) {
   const stopApp = async (toolId) => {
     try {
       // Kill the process first
+      console.log(`Stopping app with ID ${toolId}`);
       await killProcess(toolId);
       
+      // Get current running tools before the update
+      const runningToolsBefore = tools.filter(t => t.execution.isRunning).map(t => t.id);
+      console.log(`Currently running tools before stopping: ${JSON.stringify(runningToolsBefore)}`);
+      
+      // Important: ONLY set the specified tool to not running, don't modify other tools
       const updatedTools = tools.map(tool => 
         tool.id === toolId 
           ? { ...tool, execution: { ...tool.execution, isRunning: false } } 
-          : tool
+          : tool // Important - preserve the exact state of other tools
       );
+      
+      // Check which tools are running after the update
+      const runningToolsAfter = updatedTools.filter(t => t.execution.isRunning).map(t => t.id);
+      console.log(`Running tools after stopping: ${JSON.stringify(runningToolsAfter)}`);
       
       setTools(updatedTools);
       setFilteredTools(prev => 
         prev.map(tool => 
           tool.id === toolId 
             ? { ...tool, execution: { ...tool.execution, isRunning: false } } 
-            : tool
+            : tool // Important - preserve the exact state of other tools
         )
       );
       

@@ -32,6 +32,13 @@ export function TerminalProvider({ children }) {
   const pingIntervalRef = useRef(null);
   const reconnectIntervalRef = useRef(null);
   const reconnectCountRef = useRef(0);
+  // Add reference for last auto-close time
+  const lastClosedTimeRef = useRef(0);
+  
+  // Debug the terminal state when it changes
+  useEffect(() => {
+    console.log(`Terminal state changed: isOpen=${isTerminalOpen}, activeToolId=${activeToolId}`);
+  }, [isTerminalOpen, activeToolId]);
 
   // Function to initialize WebSocket connection
   const initWebSocket = useCallback(() => {
@@ -284,20 +291,27 @@ export function TerminalProvider({ children }) {
       return;
     }
     
-    console.log(`Opening terminal for tool: ${tool.name}`);
+    // Check if terminal was recently auto-closed
+    const timeSinceLastClose = Date.now() - lastClosedTimeRef.current;
+    console.log(`Opening terminal for tool: ${tool.name}, time since last close: ${timeSinceLastClose}ms`);
     
-    // Set the active tool
+    // Always force terminal open, regardless of previous state
     setActiveToolId(toolId);
     setActiveToolName(tool.name);
     
     // Clear previous output
     setTerminalOutput([]);
     
-    // Open the terminal, preserving minimized state if requested
-    setIsTerminalOpen(true);
-    if (!preserveState) {
-      setIsTerminalMinimized(true);
-    }
+    // IMPORTANT: Force reset terminal state with a hard set to ensure it opens
+    console.log('Forcing terminal open');
+    
+    // Use a small timeout to ensure state is updated after any pending updates
+    setTimeout(() => {
+      setIsTerminalOpen(true);
+      if (!preserveState) {
+        setIsTerminalMinimized(true);
+      }
+    }, 0);
     
     // Subscribe to the tool's output
     subscribeToToolOutput(toolId);
@@ -308,6 +322,9 @@ export function TerminalProvider({ children }) {
     console.log('closeTerminal called');
     setIsTerminalOpen(false);
     setIsTerminalMinimized(true);
+    
+    // Record the time of this close for debugging
+    lastClosedTimeRef.current = Date.now();
   };
 
   // Function to clear the terminal
@@ -319,16 +336,45 @@ export function TerminalProvider({ children }) {
   useEffect(() => {
     const handleOpenTerminal = (event) => {
       if (event.detail && event.detail.toolId) {
-        openTerminalForTool(event.detail.toolId);
+        const toolId = event.detail.toolId;
+        const timeSinceLastClose = Date.now() - lastClosedTimeRef.current;
+        console.log(`Received open-terminal event for tool ${toolId}, time since last close: ${timeSinceLastClose}ms`);
+        
+        // Always force open terminal for any event
+        openTerminalForTool(toolId);
       }
     };
     
+    console.log('Adding open-terminal event listener');
     window.addEventListener('open-terminal', handleOpenTerminal);
     
     return () => {
+      console.log('Removing open-terminal event listener');
       window.removeEventListener('open-terminal', handleOpenTerminal);
     };
-  }, [tools]); // Re-add event listener if tools change
+  }, [tools]); // Keep the tools dependency
+  
+  // Re-trigger terminal open for the active tool when tools change
+  useEffect(() => {
+    // Only if we have an active tool ID and its running state changed
+    if (activeToolId) {
+      const activeTool = tools.find(t => t.id === activeToolId);
+      
+      // IMPORTANT: Only open terminal if the active tool is ACTUALLY running
+      // The previous code was re-opening the terminal for inactive tools
+      if (activeTool && activeTool.execution.isRunning && !isTerminalOpen) {
+        console.log(`Re-triggering terminal open for active running tool ${activeToolId}`);
+        setIsTerminalOpen(true);
+      }
+      
+      // If active tool is no longer running, clear the active tool ID instead of reopening
+      if (activeTool && !activeTool.execution.isRunning) {
+        console.log(`Active tool ${activeToolId} is no longer running, will not auto-reopen terminal`);
+        // Don't auto-reset the active tool, as the user might still want to see its output
+        // Just don't auto-reopen the terminal
+      }
+    }
+  }, [tools, activeToolId, isTerminalOpen]);
 
   return (
     <TerminalContext.Provider
