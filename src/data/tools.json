@@ -83,7 +83,7 @@
           "activationCommand": "source .venv/bin/activate"
         },
         "command": "python main.py",
-        "isRunning": true,
+        "isRunning": false,
         "error": null
       }
     },
@@ -190,4 +190,4 @@
       "id": "10"
     }
   ]
-}}
+}
