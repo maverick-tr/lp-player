@@ -37,7 +37,7 @@ const AppContent = memo(function AppContent() {
       <Header />
       {/* Only add spacing when terminal is open AND maximized - reduced to match mt-8 */}
       {isTerminalOpen && !isTerminalMinimized && <div className="h-[108px] w-full"></div>}
-      <main className="container mx-auto px-4 py-8 mb-16">
+      <main className="container mx-auto px-4 py-8 pb-24">
         <div className="pt-8">
           <SearchBar />
         </div>

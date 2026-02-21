@@ -13,6 +13,10 @@ body, #root {
   filter: none !important;
 }
 
+html {
+  background-color: #000000;
+}
+
 body {
   margin: 0;
   font-family: 'Inconsolata', monospace;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Dialog } from '@headlessui/react';
 import { useTools } from '../../hooks/useTools';
+import InstallerService from '../../services/InstallerService';
 import { useTheme } from '../../hooks/useTheme';
 
 // Array of possible vinyl colors to use for default images
@@ -70,6 +71,11 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [categoryInput, setCategoryInput] = useState(existingTool ? existingTool.category : 'application');
   const [error, setError] = useState('');
+  const [gitInstallation, setGitInstallation] = useState(null);
+  const [showGitInstall, setShowGitInstall] = useState(false);
+  const [gitRepoUrl, setGitRepoUrl] = useState('');
+  const [gitTargetPath, setGitTargetPath] = useState('');
+  const installerService = useRef(null);
   const [portWarning, setPortWarning] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -354,6 +360,54 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
     });
   };
 
+  // Initialize installer service
+  useEffect(() => {
+    installerService.current = new InstallerService({ addApp });
+  }, [addApp]);
+
+  const handleGitInstall = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!gitRepoUrl) {
+      setError('Git repository URL is required');
+      return;
+    }
+
+    if (!gitTargetPath) {
+      setError('Target directory is required');
+      return;
+    }
+
+    try {
+      const result = await installerService.current.installFromGit(
+        gitRepoUrl,
+        gitTargetPath,
+        (progress) => {
+          setGitInstallation(progress);
+        }
+      );
+
+      if (result.success) {
+        setSuccess('Project installed successfully!');
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      setError(`Installation failed: ${error.message}`);
+    }
+  };
+
+  const cancelGitInstall = () => {
+    if (installerService.current.cancelInstallation()) {
+      setGitInstallation(null);
+      setShowGitInstall(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -437,20 +491,119 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <Dialog.Panel className={`
           w-full max-w-lg rounded-xl p-4 shadow-2xl overflow-y-auto max-h-[85vh]
-          ${isDarkMode 
-            ? 'bg-gradient-to-br from-[#bccc0f]/40 to-tool-dark border border-[#bccc0f]/50' 
-            : 'bg-white border-2 border-[#bccc0f]'
+          ${isDarkMode
+            ? 'bg-gradient-to-br from-[#bccc0f]/15 to-tool-dark border border-[#bccc0f]/25'
+            : 'bg-gray-50 border border-[#7a8a0b]/40'
           }
         `}>
           <Dialog.Title className={`
             text-lg font-bold mb-3
-            ${isDarkMode ? 'text-[#bccc0f]' : 'text-black'}
+            ${isDarkMode ? 'text-[#bccc0f]/80' : 'text-[#4a5a06]'}
           `}>
-            {isEditing ? 'Edit App' : 'Add New App'}
+            {showGitInstall ? 'Install from Git' : isEditing ? 'Edit App' : 'Add New App'}
           </Dialog.Title>
 
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {/* Basic App Info */}
+          {showGitInstall ? (
+            <form onSubmit={handleGitInstall} className="space-y-3">
+              <div>
+                <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Git Repository URL*
+                </label>
+                <input
+                  type="text"
+                  value={gitRepoUrl}
+                  onChange={(e) => setGitRepoUrl(e.target.value)}
+                  placeholder="https://github.com/user/repo.git"
+                  className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Target Directory*
+                </label>
+                <input
+                  type="text"
+                  value={gitTargetPath}
+                  onChange={(e) => setGitTargetPath(e.target.value)}
+                  placeholder="path/to/install"
+                  className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
+                  required
+                />
+              </div>
+
+              {gitInstallation && (
+                <div className="p-3 rounded bg-black/10">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm font-medium">
+                      {gitInstallation.status.charAt(0).toUpperCase() + gitInstallation.status.slice(1)}
+                    </span>
+                    <span className="text-sm">
+                      {gitInstallation.currentCommand ? `Running: ${gitInstallation.currentCommand}` : ''}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className={`h-2.5 rounded-full ${
+                        gitInstallation.status === 'completed' ? 'bg-green-500' :
+                        gitInstallation.status === 'failed' ? 'bg-red-500' :
+                        'bg-[#bccc0f]/70'
+                      }`}
+                      style={{
+                        width: `${gitInstallation.status === 'completed' ? 100 :
+                               gitInstallation.status === 'failed' ? 100 :
+                               ['cloning', 'parsing', 'planning', 'installing', 'registering']
+                                 .indexOf(gitInstallation.status) * 20}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    cancelGitInstall();
+                    setShowGitInstall(false);
+                  }}
+                  className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={gitInstallation && gitInstallation.status === 'installing'}
+                  className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-[#bccc0f]/70 hover:bg-[#bccc0f]/60 text-black' : 'bg-[#7a8a0b] hover:bg-[#6b7a08] text-white'}`}
+                >
+                  {gitInstallation ? (
+                    gitInstallation.status === 'installing' ? 'Installing...' :
+                    gitInstallation.status === 'completed' ? 'Done' :
+                    'Continue'
+                  ) : 'Install'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="flex justify-center mb-4">
+                <button
+                  type="button"
+                  onClick={() => setShowGitInstall(true)}
+                  className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-[#bccc0f]/70 hover:bg-[#bccc0f]/60 text-black' : 'bg-[#7a8a0b] hover:bg-[#6b7a08] text-white'}`}
+                >
+                  Install from Git Repository
+                </button>
+              </div>
+
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-gray-400"></div>
+                <span className={`flex-shrink mx-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>or</span>
+                <div className="flex-grow border-t border-gray-400"></div>
+              </div>
+
+              {/* Basic App Info */}
             <div>
               <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 App Name*
@@ -460,7 +613,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                 name="name"
                 value={appData.name}
                 onChange={handleInputChange}
-                className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                 required
               />
             </div>
@@ -474,7 +627,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                 name="description"
                 value={appData.description}
                 onChange={handleInputChange}
-                className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
               />
             </div>
 
@@ -489,7 +642,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                   value={appData.port}
                   onChange={handlePortChange}
                   placeholder="e.g. 3000, 8080"
-                  className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                  className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                 />
                 {portWarning && (
                   <p className="text-yellow-400 text-xs mt-1">{portWarning}</p>
@@ -506,12 +659,12 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                     value={categoryInput}
                     onChange={handleCategoryInputChange}
                     onFocus={() => setShowCategoryDropdown(true)}
-                    className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                     placeholder="Select category"
                   />
                   {showCategoryDropdown && (
                     <div className={`absolute z-10 mt-1 w-full rounded-md shadow-lg ${
-                      isDarkMode ? 'bg-tool-dark border border-[#bccc0f]/50' : 'bg-white border border-gray-300'
+                      isDarkMode ? 'bg-tool-dark border border-[#bccc0f]/25' : 'bg-white border border-gray-300'
                     }`}>
                       <ul className="py-1 max-h-32 overflow-auto">
                         {existingCategories.map(category => (
@@ -519,7 +672,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                             key={category}
                             className={`px-3 py-1 cursor-pointer text-sm ${
                               isDarkMode 
-                                ? 'hover:bg-[#bccc0f]/20 text-white' 
+                                ? 'hover:bg-[#bccc0f]/10 text-white' 
                                 : 'hover:bg-gray-100 text-black'
                             }`}
                             onClick={() => handleSelectCategory(category)}
@@ -571,8 +724,8 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       onClick={() => fileInputRef.current.click()}
                       className={`px-2 py-1 rounded-lg text-xs ${
                         isDarkMode 
-                          ? 'bg-[#bccc0f] text-black hover:bg-[#bccc0f]/90'
-                          : 'bg-[#bccc0f] text-black hover:bg-[#bccc0f]/90'
+                          ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
+                          : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
                       }`}
                     >
                       Upload Image
@@ -583,7 +736,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       value={appData.logoPath}
                       onChange={handleInputChange}
                       placeholder="Or enter image path"
-                      className={`form-input w-full text-xs py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                      className={`form-input w-full text-xs py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                     />
                   </div>
                 </div>
@@ -601,7 +754,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                     value={tagInput}
                     onChange={handleTagInputChange}
                     onFocus={() => setShowTagSuggestions(tagSuggestions.length > 0)}
-                    className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                    className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                     placeholder="Add a tag"
                   />
                   <button
@@ -609,8 +762,8 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                     onClick={handleTagAdd}
                     className={`px-2 py-1 rounded-lg text-xs ${
                       isDarkMode 
-                        ? 'bg-[#bccc0f] text-black hover:bg-[#bccc0f]/90'
-                        : 'bg-[#bccc0f] text-black hover:bg-[#bccc0f]/90'
+                        ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
+                        : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
                     }`}
                   >
                     Add
@@ -619,7 +772,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                 
                 {showTagSuggestions && (
                   <div className={`absolute z-10 mt-1 w-full rounded-md shadow-lg ${
-                    isDarkMode ? 'bg-tool-dark border border-[#bccc0f]/50' : 'bg-white border border-gray-300'
+                    isDarkMode ? 'bg-tool-dark border border-[#bccc0f]/25' : 'bg-white border border-gray-300'
                   }`}>
                     <ul className="py-1 max-h-32 overflow-auto">
                       {tagSuggestions.map(tag => (
@@ -627,7 +780,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                           key={tag}
                           className={`px-3 py-1 cursor-pointer text-sm ${
                             isDarkMode 
-                              ? 'hover:bg-[#bccc0f]/20 text-white' 
+                              ? 'hover:bg-[#bccc0f]/10 text-white' 
                               : 'hover:bg-gray-100 text-black'
                           }`}
                           onClick={() => handleSelectTag(tag)}
@@ -645,7 +798,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                   <span 
                     key={index}
                     className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                      isDarkMode ? 'bg-[#bccc0f]/30 text-[#bccc0f]' : 'bg-[#bccc0f]/20 text-black'
+                      isDarkMode ? 'bg-[#bccc0f]/15 text-[#bccc0f]/70' : 'bg-[#7a8a0b]/15 text-[#4a5a06]'
                     }`}
                   >
                     {tag}
@@ -663,7 +816,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
 
             {/* Execution Settings */}
             <div className="border-t pt-3 mt-2 border-gray-600">
-              <h3 className={`font-medium mb-2 text-sm ${isDarkMode ? 'text-[#bccc0f]' : 'text-black'}`}>
+              <h3 className={`font-medium mb-2 text-sm ${isDarkMode ? 'text-[#bccc0f]/80' : 'text-[#4a5a06]'}`}>
                 Execution Settings
               </h3>
               
@@ -678,7 +831,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       name="execution.rootPath"
                       value={appData.execution.rootPath}
                       onChange={handleInputChange}
-                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                       required
                     />
                     <button
@@ -686,9 +839,9 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       onClick={detectEnvironment}
                       disabled={detectingEnv}
                       className={`px-2 py-1 rounded-lg whitespace-nowrap text-xs ${
-                        isDarkMode 
-                          ? 'bg-[#bccc0f] text-black hover:bg-[#bccc0f]/90' 
-                          : 'bg-[#bccc0f] text-black hover:bg-[#bccc0f]/90'
+                        isDarkMode
+                          ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
+                          : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
                       } ${detectingEnv ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {detectingEnv ? 'Detecting...' : 'Detect Env'}
@@ -706,7 +859,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       name="environment.activationCommand"
                       value={appData.execution.environment.activationCommand}
                       onChange={handleEnvironmentCommandChange}
-                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                       placeholder="e.g. source .venv/bin/activate"
                     />
                   </div>
@@ -720,7 +873,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       name="execution.command"
                       value={appData.execution.command}
                       onChange={handleInputChange}
-                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/50 text-white' : 'bg-white border-gray-300 text-black'}`}
+                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                       placeholder="e.g. python app.py"
                       required
                     />
@@ -747,15 +900,16 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                 type="submit"
                 disabled={isSubmitting}
                 className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                  isDarkMode 
-                    ? 'bg-[#bccc0f] text-black hover:bg-[#bccc0f]/90' 
-                    : 'bg-[#bccc0f] text-black hover:bg-[#bccc0f]/90'
+                  isDarkMode
+                    ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
+                    : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
                 } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {isSubmitting ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Update' : 'Add')}
               </button>
             </div>
           </form>
+          )}
         </Dialog.Panel>
       </div>
 
@@ -763,10 +917,10 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className={`p-6 rounded-xl shadow-2xl ${
             isDarkMode 
-              ? 'bg-gradient-to-br from-[#bccc0f]/40 to-tool-dark border border-[#bccc0f]/50 text-white' 
-              : 'bg-white border-2 border-[#bccc0f] text-black'
+              ? 'bg-gradient-to-br from-[#bccc0f]/15 to-tool-dark border border-[#bccc0f]/25 text-white'
+              : 'bg-gray-50 border border-[#7a8a0b]/40 text-black'
           }`}>
-            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-[#bccc0f]' : 'text-black'}`}>Discard Changes?</h2>
+            <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-[#bccc0f]/80' : 'text-[#4a5a06]'}`}>Discard Changes?</h2>
             <p>You have unsaved changes. Are you sure you want to close without saving?</p>
             <div className="flex justify-end space-x-3 mt-6">
               <button
