@@ -20,4 +20,57 @@ html {
 body {
   margin: 0;
   font-family: 'Inconsolata', monospace;
+}
+
+/* Shimmer effect for newly added cards */
+@keyframes shimmer-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(188, 204, 15, 0.2); }
+  50%      { box-shadow: 0 0 14px rgba(188, 204, 15, 0.5), 0 0 28px rgba(188, 204, 15, 0.25); }
+}
+
+@keyframes shimmer-slide {
+  0%   { left: -100%; }
+  50%  { left: 140%; }
+  100% { left: 140%; }
+}
+
+.shimmer-card {
+  position: relative;
+  overflow: hidden;
+  animation: shimmer-glow 2s ease 3;
+}
+
+.shimmer-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(188, 204, 15, 0.2), transparent);
+  animation: shimmer-slide 3s ease-in-out 3;
+  pointer-events: none;
+  z-index: 50;
+  border-radius: inherit;
+}
+
+/* Infinite shimmer variant for loading states */
+.shimmer-card-loop {
+  position: relative;
+  overflow: hidden;
+  animation: shimmer-glow 2s ease infinite;
+}
+
+.shimmer-card-loop::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(188, 204, 15, 0.2), transparent);
+  animation: shimmer-slide 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 50;
+  border-radius: inherit;
 } 

@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { ToolProvider } from './context/ToolContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { TerminalProvider } from './context/TerminalContext';
 import { useTheme } from './hooks/useTheme';
 import { useTerminal } from './hooks/useTerminal';
@@ -62,13 +63,15 @@ function App() {
   return (
     <ThemeProvider>
       <NotificationProvider>
-        <ToolProvider>
-          <TerminalProvider>
-            <Router>
-              <AppContent />
-            </Router>
-          </TerminalProvider>
-        </ToolProvider>
+        <SettingsProvider>
+          <ToolProvider>
+            <TerminalProvider>
+              <Router>
+                <AppContent />
+              </Router>
+            </TerminalProvider>
+          </ToolProvider>
+        </SettingsProvider>
       </NotificationProvider>
     </ThemeProvider>
   );

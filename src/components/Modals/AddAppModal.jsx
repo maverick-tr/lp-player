@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
 import { useTools } from '../../hooks/useTools';
-import InstallerService from '../../services/InstallerService';
 import { useTheme } from '../../hooks/useTheme';
+import { useSettings } from '../../hooks/useSettings';
+import InstallProgressPanel from '../Install/InstallProgressPanel';
 
 // Array of possible vinyl colors to use for default images
 const DEFAULT_COLORS = [
@@ -67,22 +68,33 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       }
     }
   );
+  // Per-project environment variables
+  const [envVarEntries, setEnvVarEntries] = useState(() => {
+    const vars = existingTool?.execution?.environment?.variables || {};
+    const entries = Object.entries(vars).map(([key, value]) => ({ key, value }));
+    return entries;
+  });
+
   const [tagInput, setTagInput] = useState('');
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [categoryInput, setCategoryInput] = useState(existingTool ? existingTool.category : 'application');
   const [error, setError] = useState('');
-  const [gitInstallation, setGitInstallation] = useState(null);
   const [showGitInstall, setShowGitInstall] = useState(false);
   const [gitRepoUrl, setGitRepoUrl] = useState('');
   const [gitTargetPath, setGitTargetPath] = useState('');
-  const installerService = useRef(null);
   const [portWarning, setPortWarning] = useState('');
+  // AI install state
+  const [installState, setInstallState] = useState(null); // { phase, plan, steps, question, error }
+  const [installId, setInstallId] = useState(null);
+  const wsRef = useRef(null);
+  const { settings, isAiConfigured } = useSettings();
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detectingEnv, setDetectingEnv] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [fetchingLogo, setFetchingLogo] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -108,14 +120,26 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
     }
   }, [appData.port, allTools, isEditing, appData.id]);
 
-  const hasChanges = appData.name !== '' || 
-    appData.description !== '' || 
-    appData.logoPath !== '' ||
-    appData.category !== 'application' ||
-    appData.tags.length > 0 ||
-    appData.port !== '' ||
-    appData.execution.rootPath !== '' ||
-    appData.execution.command !== '';
+  const [savedSinceOpen, setSavedSinceOpen] = useState(false);
+  const [initialSnapshot] = useState(() => JSON.stringify(existingTool || null));
+
+  const hasChanges = (() => {
+    if (savedSinceOpen) return false;
+    if (isEditing) {
+      // Compare current state against the original tool
+      return JSON.stringify(appData) !== initialSnapshot;
+    }
+    // For new apps, check if user has entered anything
+    return appData.name !== '' ||
+      appData.description !== '' ||
+      appData.logoPath !== '' ||
+      appData.category !== 'application' ||
+      appData.tags.length > 0 ||
+      appData.port !== '' ||
+      appData.execution.rootPath !== '' ||
+      appData.execution.command !== '' ||
+      envVarEntries.length > 0;
+  })();
     
   const handleCloseClick = () => {
     if (hasChanges) {
@@ -193,6 +217,35 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
         });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Check if a string looks like a URL
+  const isUrl = (str) => /^https?:\/\/.+/i.test(str);
+
+  // Fetch image from URL (direct image or favicon)
+  const handleFetchLogo = async () => {
+    const url = appData.logoPath?.trim();
+    if (!url || !isUrl(url)) return;
+    setFetchingLogo(true);
+    setError('');
+    try {
+      const res = await fetch(`http://${window.location.hostname}:4243/api/fetch-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (data.success && data.dataUri) {
+        setImagePreview(data.dataUri);
+        setAppData(prev => ({ ...prev, logoPath: data.dataUri }));
+      } else {
+        setError(data.error || 'Could not fetch image from URL');
+      }
+    } catch (err) {
+      setError(`Failed to fetch image: ${err.message}`);
+    } finally {
+      setFetchingLogo(false);
     }
   };
 
@@ -287,58 +340,22 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
 
       const result = await response.json();
       
+      let activationCommand = '';
       if (result.hasPythonVenv) {
-        setAppData({
-          ...appData,
-          execution: {
-            ...appData.execution,
-            environment: {
-              activationCommand: 'source .venv/bin/activate'
-            }
-          }
-        });
+        activationCommand = 'source .venv/bin/activate';
       } else if (result.hasConda) {
-        setAppData({
-          ...appData,
-          execution: {
-            ...appData.execution,
-            environment: {
-              activationCommand: 'conda activate env-name'
-            }
-          }
-        });
-      } else if (result.hasNodeModules) {
-        setAppData({
-          ...appData,
-          execution: {
-            ...appData.execution,
-            environment: {
-              activationCommand: ''
-            }
-          }
-        });
-      } else if (result.hasDotEnv) {
-        // If .env file is detected but no other environment, don't suggest conda
-        setAppData({
-          ...appData,
-          execution: {
-            ...appData.execution,
-            environment: {
-              activationCommand: ''
-            }
-          }
-        });
-      } else {
-        setAppData({
-          ...appData,
-          execution: {
-            ...appData.execution,
-            environment: {
-              activationCommand: ''
-            }
-          }
-        });
+        activationCommand = 'conda activate env-name';
       }
+      setAppData({
+        ...appData,
+        execution: {
+          ...appData.execution,
+          environment: {
+            ...appData.execution.environment,
+            activationCommand
+          }
+        }
+      });
     } catch (error) {
       console.error('Error detecting environment:', error);
       setError(`Failed to detect environment: ${error.message}`);
@@ -354,21 +371,99 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       execution: {
         ...appData.execution,
         environment: {
+          ...appData.execution.environment,
           activationCommand: value
         }
       }
     });
   };
 
-  // Initialize installer service
+  // WebSocket connection for install progress
   useEffect(() => {
-    installerService.current = new InstallerService({ addApp });
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, []);
+
+  const connectInstallWs = useCallback((id) => {
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+
+    const ws = new WebSocket(`ws://${window.location.hostname}:4243`);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'subscribe-install', installId: id }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type !== 'install-progress' || data.installId !== id) return;
+
+        setInstallState(prev => {
+          const next = { ...prev, phase: data.phase };
+
+          if (data.plan) next.plan = data.plan;
+          if (data.error) next.error = data.error;
+          if (data.question) next.question = data.question;
+          if (data.postInstallNotes) next.postInstallNotes = data.postInstallNotes;
+
+          // Update steps array
+          if (data.steps) {
+            next.steps = data.steps;
+          } else if (data.step && data.stepIndex !== undefined && prev?.steps) {
+            const steps = [...prev.steps];
+            steps[data.stepIndex] = data.step;
+            next.steps = steps;
+          } else if (data.step && data.phase === 'executing' && !prev?.steps) {
+            next.steps = [data.step];
+          }
+
+          // Append live output to running step or phase
+          if (data.liveOutput !== undefined) {
+            if (data.stepIndex !== undefined && next.steps) {
+              const steps = [...(next.steps)];
+              if (steps[data.stepIndex]) {
+                steps[data.stepIndex] = {
+                  ...steps[data.stepIndex],
+                  liveOutput: (steps[data.stepIndex].liveOutput || '') + data.liveOutput
+                };
+                next.steps = steps;
+              }
+            } else {
+              // Phase-level output (e.g. cloning progress)
+              next.phaseLiveOutput = (prev?.phaseLiveOutput || '') + data.liveOutput;
+            }
+          }
+          // Clear phase output when phase changes
+          if (data.phase !== prev?.phase) {
+            next.phaseLiveOutput = '';
+          }
+
+          // Tool registration on completion
+          if (data.phase === 'completed' && data.tool) {
+            addApp(data.tool);
+          }
+
+          return next;
+        });
+      } catch { /* ignore parse errors */ }
+    };
+
+    ws.onerror = () => {
+      setInstallState(prev => prev ? { ...prev, phase: 'failed', error: 'WebSocket connection lost' } : null);
+    };
   }, [addApp]);
 
   const handleGitInstall = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (!gitRepoUrl) {
       setError('Git repository URL is required');
       return;
@@ -379,33 +474,65 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       return;
     }
 
-    try {
-      const result = await installerService.current.installFromGit(
-        gitRepoUrl,
-        gitTargetPath,
-        (progress) => {
-          setGitInstallation(progress);
-        }
-      );
+    // Initialize install state
+    setInstallState({ phase: 'starting', plan: null, steps: [], question: null, error: null });
 
-      if (result.success) {
-        setSuccess('Project installed successfully!');
-        setTimeout(() => {
-          onClose();
-        }, 1500);
-      } else {
-        setError(result.error);
+    try {
+      const response = await fetch(`http://${window.location.hostname}:4243/api/install/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl: gitRepoUrl, targetPath: gitTargetPath })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(err.error || `Server responded with ${response.status}`);
       }
-    } catch (error) {
-      setError(`Installation failed: ${error.message}`);
+
+      const { installId: id } = await response.json();
+      setInstallId(id);
+      connectInstallWs(id);
+    } catch (err) {
+      setInstallState({ phase: 'failed', plan: null, steps: [], question: null, error: err.message });
     }
   };
 
-  const cancelGitInstall = () => {
-    if (installerService.current.cancelInstallation()) {
-      setGitInstallation(null);
-      setShowGitInstall(false);
+  const handleInstallAnswer = useCallback((questionId, answer) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && installId) {
+      wsRef.current.send(JSON.stringify({
+        type: 'install-answer',
+        installId,
+        questionId,
+        answer
+      }));
+      // Clear the question from state
+      setInstallState(prev => prev ? { ...prev, question: null } : null);
     }
+  }, [installId]);
+
+  const handleInstallCancel = useCallback(async () => {
+    if (installId) {
+      try {
+        await fetch(`http://${window.location.hostname}:4243/api/install/cancel/${installId}`, {
+          method: 'POST'
+        });
+      } catch { /* ignore */ }
+    }
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setInstallState(null);
+    setInstallId(null);
+  }, [installId]);
+
+  const handleBackFromGitInstall = () => {
+    if (installState && installState.phase !== 'completed' && installState.phase !== 'failed' && installState.phase !== 'cancelled') {
+      handleInstallCancel();
+    }
+    setInstallState(null);
+    setInstallId(null);
+    setShowGitInstall(false);
   };
 
   const handleSubmit = async (e) => {
@@ -434,10 +561,25 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       return;
     }
     
+    // Build per-project env variables object
+    const projectVariables = {};
+    envVarEntries.forEach(({ key, value }) => {
+      if (key.trim()) {
+        projectVariables[key.trim()] = value;
+      }
+    });
+
     // If no logo path is provided, use the default vinyl SVG with the random color
     const finalAppData = {
       ...appData,
-      logoPath: appData.logoPath || generateVinylSvgDataUri(defaultVinylColor.current)
+      logoPath: appData.logoPath || generateVinylSvgDataUri(defaultVinylColor.current),
+      execution: {
+        ...appData.execution,
+        environment: {
+          ...appData.execution.environment,
+          variables: projectVariables
+        }
+      }
     };
     
     setIsSubmitting(true);
@@ -446,20 +588,18 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       if (isEditing) {
         const result = await updateApp(finalAppData);
         if (result) {
+          setSavedSinceOpen(true);
           setSuccess('App updated successfully!');
-          setTimeout(() => {
-            onClose();
-          }, 1500);
+          setTimeout(() => onClose(), 800);
         } else {
           setError('Failed to update app. Please try again.');
         }
       } else {
         const result = await addApp(finalAppData);
         if (result) {
+          setSavedSinceOpen(true);
           setSuccess('App added successfully!');
-          setTimeout(() => {
-            onClose();
-          }, 1500);
+          setTimeout(() => onClose(), 800);
         } else {
           setError('Failed to add app. Please try again.');
         }
@@ -504,87 +644,120 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
           </Dialog.Title>
 
           {showGitInstall ? (
-            <form onSubmit={handleGitInstall} className="space-y-3">
-              <div>
-                <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Git Repository URL*
-                </label>
-                <input
-                  type="text"
-                  value={gitRepoUrl}
-                  onChange={(e) => setGitRepoUrl(e.target.value)}
-                  placeholder="https://github.com/user/repo.git"
-                  className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Target Directory*
-                </label>
-                <input
-                  type="text"
-                  value={gitTargetPath}
-                  onChange={(e) => setGitTargetPath(e.target.value)}
-                  placeholder="path/to/install"
-                  className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
-                  required
-                />
-              </div>
-
-              {gitInstallation && (
-                <div className="p-3 rounded bg-black/10">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-sm font-medium">
-                      {gitInstallation.status.charAt(0).toUpperCase() + gitInstallation.status.slice(1)}
-                    </span>
-                    <span className="text-sm">
-                      {gitInstallation.currentCommand ? `Running: ${gitInstallation.currentCommand}` : ''}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div
-                      className={`h-2.5 rounded-full ${
-                        gitInstallation.status === 'completed' ? 'bg-green-500' :
-                        gitInstallation.status === 'failed' ? 'bg-red-500' :
-                        'bg-[#bccc0f]/70'
-                      }`}
-                      style={{
-                        width: `${gitInstallation.status === 'completed' ? 100 :
-                               gitInstallation.status === 'failed' ? 100 :
-                               ['cloning', 'parsing', 'planning', 'installing', 'registering']
-                                 .indexOf(gitInstallation.status) * 20}%`
-                      }}
-                    />
-                  </div>
+            <div className="space-y-3">
+              {/* AI indicator */}
+              {isAiConfigured ? (
+                <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${
+                  isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-700'
+                }`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  AI-powered install
+                </div>
+              ) : (
+                <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${
+                  isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
+                }`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                  AI not configured — <span className="underline cursor-pointer" onClick={() => { /* user can open settings from header */ }}>configure in Settings</span>
                 </div>
               )}
 
-              <div className="flex justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    cancelGitInstall();
-                    setShowGitInstall(false);
-                  }}
-                  className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'}`}
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  disabled={gitInstallation && gitInstallation.status === 'installing'}
-                  className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-[#bccc0f]/70 hover:bg-[#bccc0f]/60 text-black' : 'bg-[#7a8a0b] hover:bg-[#6b7a08] text-white'}`}
-                >
-                  {gitInstallation ? (
-                    gitInstallation.status === 'installing' ? 'Installing...' :
-                    gitInstallation.status === 'completed' ? 'Done' :
-                    'Continue'
-                  ) : 'Install'}
-                </button>
-              </div>
-            </form>
+              {/* Show form if not yet installing */}
+              {!installState ? (
+                <form onSubmit={handleGitInstall} className="space-y-3">
+                  <div>
+                    <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Git Repository URL*
+                    </label>
+                    <input
+                      type="text"
+                      value={gitRepoUrl}
+                      onChange={(e) => setGitRepoUrl(e.target.value)}
+                      placeholder="https://github.com/user/repo.git"
+                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Target Directory*
+                    </label>
+                    <input
+                      type="text"
+                      value={gitTargetPath}
+                      onChange={(e) => setGitTargetPath(e.target.value)}
+                      placeholder="/path/to/install"
+                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
+                      required
+                    />
+                  </div>
+
+                  {error && <p className="text-red-400 text-sm">{error}</p>}
+
+                  <div className="flex justify-between pt-2">
+                    <button
+                      type="button"
+                      onClick={handleBackFromGitInstall}
+                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                        isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-black'
+                      }`}
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        isDarkMode
+                          ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
+                          : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
+                      }`}
+                    >
+                      Install
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Install in progress — show progress panel */
+                <div className="space-y-3">
+                  <InstallProgressPanel
+                    installState={installState}
+                    installId={installId}
+                    onAnswer={handleInstallAnswer}
+                    onCancel={handleInstallCancel}
+                    isDarkMode={isDarkMode}
+                  />
+
+                  {/* Back / Close button after completion or failure */}
+                  {(installState.phase === 'completed' || installState.phase === 'failed' || installState.phase === 'cancelled') && (
+                    <div className="flex justify-between pt-2">
+                      <button
+                        type="button"
+                        onClick={handleBackFromGitInstall}
+                        className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                          isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-black'
+                        }`}
+                      >
+                        {installState.phase === 'completed' ? 'Close' : 'Back'}
+                      </button>
+                      {installState.phase === 'completed' && (
+                        <button
+                          type="button"
+                          onClick={onClose}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            isDarkMode
+                              ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
+                              : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
+                          }`}
+                        >
+                          Done
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-3">
               <div className="flex justify-center mb-4">
@@ -692,18 +865,21 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                 Logo
               </label>
               <div className="flex gap-2 items-start">
-                <div className="w-12 h-12 border rounded-md overflow-hidden flex items-center justify-center bg-gray-100">
-                  {imagePreview ? (
+                <div className={`w-12 h-12 border rounded-md overflow-hidden flex items-center justify-center ${isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-100 border-gray-300'}`}>
+                  {fetchingLogo ? (
+                    <span className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: isDarkMode ? '#bccc0f80' : '#7a8a0b', borderTopColor: 'transparent' }} />
+                  ) : imagePreview ? (
                     <img src={imagePreview} alt="Logo preview" className="max-w-full max-h-full object-contain" />
-                  ) : appData.logoPath ? (
+                  ) : appData.logoPath && !isUrl(appData.logoPath) ? (
                     <img src={appData.logoPath} alt="Logo preview" className="max-w-full max-h-full object-contain" />
                   ) : (
                     <div className="text-xs text-gray-400 text-center flex flex-col items-center justify-center">
-                      <img 
-                        src={generateVinylSvgDataUri(defaultVinylColor.current)} 
-                        alt="Default vinyl" 
-                        width="28" 
-                        height="28" 
+                      <img
+                        src={generateVinylSvgDataUri(defaultVinylColor.current)}
+                        alt="Default vinyl"
+                        width="28"
+                        height="28"
                         className="mx-auto"
                       />
                       <span className="text-[7px] mt-1">Vinyl</span>
@@ -719,23 +895,39 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       onChange={handleLogoUpload}
                       className="hidden"
                     />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current.click()}
-                      className={`px-2 py-1 rounded-lg text-xs ${
-                        isDarkMode 
-                          ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
-                          : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
-                      }`}
-                    >
-                      Upload Image
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current.click()}
+                        className={`px-2 py-1 rounded-lg text-xs ${
+                          isDarkMode
+                            ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
+                            : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
+                        }`}
+                      >
+                        Upload
+                      </button>
+                      {isUrl(appData.logoPath) && (
+                        <button
+                          type="button"
+                          onClick={handleFetchLogo}
+                          disabled={fetchingLogo}
+                          className={`px-2 py-1 rounded-lg text-xs ${
+                            isDarkMode
+                              ? 'bg-blue-600/70 text-white hover:bg-blue-600/50'
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          } disabled:opacity-50`}
+                        >
+                          {fetchingLogo ? 'Fetching...' : 'Fetch'}
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="text"
                       name="logoPath"
                       value={appData.logoPath}
                       onChange={handleInputChange}
-                      placeholder="Or enter image path"
+                      placeholder="Image path or URL (https://...)"
                       className={`form-input w-full text-xs py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                     />
                   </div>
@@ -878,6 +1070,75 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       required
                     />
                   </div>
+                </div>
+
+                {/* Per-project Environment Variables */}
+                <div className="mt-3">
+                  <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Environment Variables
+                  </label>
+                  <p className={`text-xs mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    Project-specific variables override global settings
+                  </p>
+
+                  {envVarEntries.length > 0 && (
+                    <div className="space-y-1.5 mb-2">
+                      {envVarEntries.map((entry, i) => (
+                        <div key={i} className="flex gap-1.5 items-center">
+                          <input
+                            type="text"
+                            value={entry.key}
+                            onChange={e => {
+                              const updated = [...envVarEntries];
+                              updated[i] = { ...updated[i], key: e.target.value };
+                              setEnvVarEntries(updated);
+                            }}
+                            placeholder="KEY"
+                            className={`form-input flex-[2] py-1 text-xs font-mono ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
+                          />
+                          <input
+                            type="text"
+                            value={entry.value}
+                            onChange={e => {
+                              const updated = [...envVarEntries];
+                              updated[i] = { ...updated[i], value: e.target.value };
+                              setEnvVarEntries(updated);
+                            }}
+                            placeholder="value"
+                            className={`form-input flex-[3] py-1 text-xs font-mono ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEnvVarEntries(prev => prev.filter((_, idx) => idx !== i))}
+                            className={`p-1 rounded transition-colors shrink-0 ${
+                              isDarkMode
+                                ? 'text-gray-500 hover:text-red-400'
+                                : 'text-gray-400 hover:text-red-500'
+                            }`}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setEnvVarEntries(prev => [...prev, { key: '', value: '' }])}
+                    className={`flex items-center gap-1 text-xs font-medium transition-colors ${
+                      isDarkMode
+                        ? 'text-[#bccc0f]/70 hover:text-[#bccc0f]'
+                        : 'text-[#7a8a0b] hover:text-[#4a5a06]'
+                    }`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                    </svg>
+                    Add Variable
+                  </button>
                 </div>
               </div>
             </div>

@@ -1,0 +1,17 @@
+{
+  "ai": {
+    "apiUrl": "",
+    "apiKey": "",
+    "model": ""
+  },
+  "installation": {
+    "autoConfirmPortChanges": false,
+    "autoRunWithoutReview": false,
+    "alwaysCreatePythonVenv": true,
+    "preferUv": true,
+    "autoSkipIncompatiblePackages": false
+  },
+  "environment": {
+    "globalVariables": {}
+  }
+}

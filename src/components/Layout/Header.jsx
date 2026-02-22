@@ -1,14 +1,15 @@
 import { useTheme } from '../../hooks/useTheme';
 import { motion, useTransform, useMotionValue } from 'framer-motion';
-import ThemeToggle from './ThemeToggle';
 import { useState, memo, useEffect } from 'react';
 import AddAppModal from '../Modals/AddAppModal';
+import UnifiedSettingsModal from '../Modals/UnifiedSettingsModal';
 import { useTools } from '../../hooks/useTools';
 
 const Header = memo(function Header() {
   const { isDarkMode } = useTheme();
   const { tools } = useTools();
   const [showAddAppModal, setShowAddAppModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const rotate = useMotionValue(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinSpeed, setSpinSpeed] = useState(0);
@@ -42,7 +43,7 @@ const Header = memo(function Header() {
     `}>
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
-          {/* Left side - Add Button */}
+          {/* Left side - Add App Button */}
           <div className="w-10">
             <motion.button
               onClick={() => setShowAddAppModal(true)}
@@ -50,8 +51,8 @@ const Header = memo(function Header() {
               whileTap={{ scale: 0.9 }}
               className={`
                 flex items-center justify-center w-8 h-8 rounded-full
-                ${isDarkMode 
-                  ? 'bg-tool-light text-[#bccc0f] hover:bg-tool-accent-light' 
+                ${isDarkMode
+                  ? 'bg-tool-light text-[#bccc0f] hover:bg-tool-accent-light'
                   : 'bg-tool-light-mode-card text-tool-light-mode-accent hover:bg-gray-200'
                 }
                 transition-colors duration-200
@@ -92,16 +93,34 @@ const Header = memo(function Header() {
             />
           </div>
           
-          {/* Theme Toggle on right */}
+          {/* Settings on right */}
           <div className="w-10">
-            <ThemeToggle />
+            <motion.button
+              onClick={() => setShowSettingsModal(true)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className={`
+                flex items-center justify-center w-8 h-8 rounded-full
+                ${isDarkMode
+                  ? 'bg-tool-light text-gray-400 hover:text-[#bccc0f] hover:bg-tool-accent-light'
+                  : 'bg-tool-light-mode-card text-gray-500 hover:text-tool-light-mode-accent hover:bg-gray-200'
+                }
+                transition-colors duration-200
+              `}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+              </svg>
+            </motion.button>
           </div>
         </div>
       </div>
 
-      {/* Add App Modal */}
       {showAddAppModal && (
         <AddAppModal onClose={() => setShowAddAppModal(false)} />
+      )}
+      {showSettingsModal && (
+        <UnifiedSettingsModal onClose={() => setShowSettingsModal(false)} />
       )}
     </header>
   );

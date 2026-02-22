@@ -96,7 +96,7 @@ function ConfirmationModal({
 }
 
 function ToolGrid() {
-  const { filteredTools, deleteApp } = useTools();
+  const { filteredTools, deleteApp, newlyAddedId } = useTools();
   const [editingTool, setEditingTool] = useState(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
@@ -148,6 +148,7 @@ function ToolGrid() {
           <ToolCard
             key={tool.id}
             tool={tool}
+            isNew={tool.id === newlyAddedId}
             onEditClick={handleEditClick}
             onDeleteClick={handleDeleteClick}
           />

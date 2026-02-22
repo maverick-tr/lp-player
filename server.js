@@ -6,7 +6,9 @@ import cors from 'cors';
 import { exec } from 'child_process';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import os from 'os'; // Add os module for system monitoring
+import os from 'os';
+import { readSettings, writeSettings, redactForFrontend } from './server/services/settingsService.js';
+import { startInstallation, getInstallation, resolveQuestion, cancelInstallation, getInstallLog } from './server/services/installService.js';
 
 // Get current file directory (ESM replacement for __dirname)
 const __filename = fileURLToPath(import.meta.url);
@@ -115,9 +117,14 @@ wss.on('connection', (ws, req) => {
           ...initialStats
         }));
       } else if (data.type === 'unsubscribe-system-stats') {
-        // Unsubscribe client from system stats
         systemMonitoringClients.delete(clientId);
         console.log(`Client ${clientId} unsubscribed from system stats`);
+      } else if (data.type === 'subscribe-install' && data.installId) {
+        ws.installId = data.installId;
+        console.log(`Client ${clientId} subscribed to install: ${data.installId}`);
+      } else if (data.type === 'install-answer' && data.installId && data.questionId) {
+        resolveQuestion(data.installId, data.questionId, data.answer);
+        console.log(`Install answer received for ${data.installId}: ${data.answer}`);
       }
     } catch (e) {
       console.error(`Error processing WebSocket message from client ${clientId}:`, e);
@@ -318,6 +325,206 @@ function broadcastProcessOutput(toolId, data, outputType = 'stdout') {
 // Constants
 const TOOLS_FILE = path.join(__dirname, 'src/data/tools.json');
 
+// ── Settings API ──────────────────────────────────────────────
+
+app.get('/api/settings', (req, res) => {
+  try {
+    const settings = readSettings();
+    res.json(redactForFrontend(settings));
+  } catch (error) {
+    console.error('Error reading settings:', error);
+    res.status(500).json({ error: 'Failed to read settings' });
+  }
+});
+
+app.post('/api/settings', (req, res) => {
+  try {
+    const updated = writeSettings(req.body);
+    res.json(redactForFrontend(updated));
+  } catch (error) {
+    console.error('Error writing settings:', error);
+    res.status(500).json({ error: 'Failed to save settings' });
+  }
+});
+
+// Test AI connection
+app.post('/api/settings/test-ai', async (req, res) => {
+  try {
+    const settings = readSettings();
+    if (!settings.ai.apiKey) {
+      return res.status(400).json({ error: 'No API key configured' });
+    }
+    const response = await fetch(`${settings.ai.apiUrl}/models`, {
+      headers: { 'Authorization': `Bearer ${settings.ai.apiKey}` }
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      return res.status(response.status).json({ error: `API error: ${text}` });
+    }
+    const data = await response.json();
+    res.json({ success: true, models: (data.data || []).slice(0, 10).map(m => m.id) });
+  } catch (error) {
+    res.status(500).json({ error: `Connection failed: ${error.message}` });
+  }
+});
+
+// ── Install API ───────────────────────────────────────────────
+
+// Broadcast install progress to subscribed WebSocket clients
+function broadcastInstallProgress(installId, progressData) {
+  if (!wss) return;
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN && client.installId === installId) {
+      client.send(JSON.stringify({
+        type: 'install-progress',
+        installId,
+        ...progressData
+      }));
+    }
+  });
+}
+
+app.post('/api/install/start', async (req, res) => {
+  try {
+    const { repoUrl } = req.body;
+    let { targetPath } = req.body;
+    if (!repoUrl || !targetPath || !targetPath.trim()) {
+      return res.status(400).json({ error: 'repoUrl and targetPath are required' });
+    }
+
+    // Expand ~ to home directory and resolve to absolute path
+    targetPath = targetPath.trim();
+    if (targetPath.startsWith('~/') || targetPath === '~') {
+      targetPath = path.join(os.homedir(), targetPath.slice(1));
+    }
+    targetPath = path.resolve(targetPath);
+    console.log(`[install] Starting: repo=${repoUrl}, target=${targetPath}`);
+
+    // Load existing tools for port conflict detection
+    let existingTools = [];
+    try {
+      const data = await fs.readFile(TOOLS_FILE, 'utf8');
+      const parsed = JSON.parse(data);
+      existingTools = parsed.tools || [];
+    } catch { /* ignore */ }
+
+    const installId = await startInstallation(repoUrl, targetPath, existingTools, broadcastInstallProgress);
+    res.json({ installId });
+  } catch (error) {
+    console.error('Install start error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/install/cancel/:installId', (req, res) => {
+  const ok = cancelInstallation(req.params.installId);
+  res.json({ success: ok });
+});
+
+app.get('/api/install/status/:installId', (req, res) => {
+  const state = getInstallation(req.params.installId);
+  if (!state) return res.status(404).json({ error: 'Installation not found' });
+  res.json({
+    installId: state.installId,
+    phase: state.phase,
+    plan: state.plan,
+    error: state.error,
+    steps: state.steps
+  });
+});
+
+app.get('/api/install/log/:installId', async (req, res) => {
+  const log = await getInstallLog(req.params.installId);
+  if (!log) return res.status(404).json({ error: 'Log not found' });
+  res.type('text/plain').send(log);
+});
+
+// ── Fetch Image / Favicon API ─────────────────────────────────
+app.post('/api/fetch-image', async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL is required' });
+
+    // Validate URL
+    let parsed;
+    try { parsed = new URL(url); } catch { return res.status(400).json({ error: 'Invalid URL' }); }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).json({ error: 'Only HTTP/HTTPS URLs are supported' });
+    }
+
+    const isImageUrl = /\.(png|jpg|jpeg|gif|svg|ico|webp|bmp|avif)(\?.*)?$/i.test(parsed.pathname);
+
+    if (isImageUrl) {
+      // Direct image URL — download it
+      const imgRes = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (!imgRes.ok) throw new Error(`HTTP ${imgRes.status}`);
+      const ct = imgRes.headers.get('content-type') || 'image/png';
+      const buf = Buffer.from(await imgRes.arrayBuffer());
+      const dataUri = `data:${ct};base64,${buf.toString('base64')}`;
+      return res.json({ success: true, dataUri });
+    }
+
+    // Website URL — try to find favicon
+    const faviconUrls = [];
+
+    // 1. Try parsing HTML for link[rel*="icon"]
+    try {
+      const htmlRes = await fetch(url, {
+        signal: AbortSignal.timeout(10000),
+        headers: { 'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 LAP-Favicon-Fetcher' }
+      });
+      if (htmlRes.ok) {
+        const html = await htmlRes.text();
+        // Match <link rel="icon" href="..."> and variants (shortcut icon, apple-touch-icon)
+        const linkRegex = /<link[^>]*rel=["'](?:shortcut\s+)?(?:icon|apple-touch-icon)["'][^>]*href=["']([^"']+)["'][^>]*>/gi;
+        const hrefFirstRegex = /<link[^>]*href=["']([^"']+)["'][^>]*rel=["'](?:shortcut\s+)?(?:icon|apple-touch-icon)["'][^>]*>/gi;
+        let m;
+        while ((m = linkRegex.exec(html)) !== null) faviconUrls.push(m[1]);
+        while ((m = hrefFirstRegex.exec(html)) !== null) faviconUrls.push(m[1]);
+      }
+    } catch { /* ignore HTML fetch errors */ }
+
+    // 2. Common favicon paths as fallback
+    faviconUrls.push('/favicon.ico', '/favicon.png', '/apple-touch-icon.png');
+
+    // Try each favicon URL
+    for (const fav of faviconUrls) {
+      try {
+        const favUrl = fav.startsWith('http') ? fav : new URL(fav, url).href;
+        const favRes = await fetch(favUrl, { signal: AbortSignal.timeout(5000) });
+        if (!favRes.ok) continue;
+        const ct = favRes.headers.get('content-type') || '';
+        if (!ct.includes('image') && !ct.includes('icon') && !ct.includes('svg')) continue;
+        const buf = Buffer.from(await favRes.arrayBuffer());
+        if (buf.length < 100) continue; // Too small, probably not a real image
+        const dataUri = `data:${ct.split(';')[0]};base64,${buf.toString('base64')}`;
+        return res.json({ success: true, dataUri });
+      } catch { /* try next */ }
+    }
+
+    // 3. Last resort: Google favicon service
+    try {
+      const googleUrl = `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=128`;
+      const gRes = await fetch(googleUrl, { signal: AbortSignal.timeout(5000) });
+      if (gRes.ok) {
+        const ct = gRes.headers.get('content-type') || 'image/png';
+        const buf = Buffer.from(await gRes.arrayBuffer());
+        if (buf.length > 100) {
+          const dataUri = `data:${ct.split(';')[0]};base64,${buf.toString('base64')}`;
+          return res.json({ success: true, dataUri });
+        }
+      }
+    } catch { /* ignore */ }
+
+    res.json({ success: false, error: 'Could not find a favicon for this URL' });
+  } catch (error) {
+    console.error('Error fetching image:', error.message);
+    res.status(500).json({ error: `Failed to fetch image: ${error.message}` });
+  }
+});
+
+// ── Tools API ─────────────────────────────────────────────────
+
 // Get all tools
 app.get('/api/tools', async (req, res) => {
   try {
@@ -359,83 +566,80 @@ app.post('/api/tools', async (req, res) => {
 // API endpoint to run a tool
 app.post('/api/tools/run', async (req, res) => {
   try {
-    const { toolId, rootPath, command, envCommand } = req.body;
-    
+    const { toolId, rootPath, command, envCommand, envVariables } = req.body;
+
     if (!toolId || !rootPath || !command) {
       return res.status(400).json({ success: false, message: 'Missing required parameters' });
     }
-    
+
     // Construct the full command
     let fullCommand;
     if (command.endsWith('.sh') || command.startsWith('./')) {
-      // For shell scripts, make sure they are executable and use bash to run them
-      fullCommand = envCommand 
+      fullCommand = envCommand
         ? `cd "${rootPath}" && ${envCommand} && bash ${command}`
         : `cd "${rootPath}" && bash ${command}`;
     } else {
-      fullCommand = envCommand 
+      fullCommand = envCommand
         ? `cd "${rootPath}" && ${envCommand} && ${command}`
         : `cd "${rootPath}" && ${command}`;
     }
-    
+
     console.log(`Executing command for tool ${toolId}: ${fullCommand}`);
-    
+
     try {
-      // Check if a process is already running for this tool
       if (runningProcesses.has(toolId)) {
         console.log(`Process for tool ${toolId} is already running`);
-        return res.status(409).json({ 
-          success: false, 
-          message: 'A process is already running for this tool' 
+        return res.status(409).json({
+          success: false,
+          message: 'A process is already running for this tool'
         });
       }
-      
-      // Execute the command with shell option to ensure commands like source work
-      const process = exec(fullCommand, { 
+
+      // Build environment: inherit system env + overlay custom vars
+      const processEnv = { ...process.env };
+      if (envVariables && typeof envVariables === 'object') {
+        Object.assign(processEnv, envVariables);
+      }
+
+      const childProc = exec(fullCommand, {
         windowsHide: true,
-        maxBuffer: 1024 * 1024 * 10, // 10MB buffer to handle large outputs
-        shell: '/bin/bash'
+        maxBuffer: 1024 * 1024 * 10,
+        shell: '/bin/bash',
+        env: processEnv
       });
-      
-      // Store the process
-      runningProcesses.set(toolId, process);
-      
-      // Broadcast initial command execution
+
+      runningProcesses.set(toolId, childProc);
       broadcastProcessOutput(toolId, `$ ${fullCommand}`, 'command');
-      
-      // Handle stdout
-      process.stdout.on('data', (data) => {
+
+      childProc.stdout.on('data', (data) => {
         console.log(`[Tool ${toolId}] stdout: ${data.toString().trim()}`);
         broadcastProcessOutput(toolId, data, 'stdout');
       });
-      
-      // Handle stderr
-      process.stderr.on('data', (data) => {
+
+      childProc.stderr.on('data', (data) => {
         console.error(`[Tool ${toolId}] stderr: ${data.toString().trim()}`);
         broadcastProcessOutput(toolId, data, 'stderr');
       });
-      
-      // Handle process exit
-      process.on('exit', (code) => {
+
+      childProc.on('exit', (code) => {
         console.log(`[Tool ${toolId}] Process exited with code ${code}`);
         broadcastProcessOutput(toolId, `Process exited with code ${code}`, 'exit');
         runningProcesses.delete(toolId);
       });
-      
-      // Handle process error
-      process.on('error', (error) => {
+
+      childProc.on('error', (error) => {
         console.error(`[Tool ${toolId}] Process error: ${error.message}`);
         broadcastProcessOutput(toolId, `Process error: ${error.message}`, 'error');
         runningProcesses.delete(toolId);
       });
-      
+
       res.setHeader('Content-Type', 'application/json');
       res.status(200).json({ success: true });
     } catch (execError) {
       console.error(`Error executing command: ${execError.message}`);
-      res.status(500).json({ 
-        success: false, 
-        message: `Error executing command: ${execError.message}` 
+      res.status(500).json({
+        success: false,
+        message: `Error executing command: ${execError.message}`
       });
     }
   } catch (error) {

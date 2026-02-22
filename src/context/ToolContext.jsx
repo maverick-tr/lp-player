@@ -1,7 +1,6 @@
 import { createContext, useState, useCallback, useRef, useLayoutEffect } from 'react';
-// Remove this import to prevent double loading
-// import toolsData from '../data/tools.json';
 import { executeProcess, killProcess, openInBrowser } from '../utils/processExecutor';
+import { useSettings } from '../hooks/useSettings';
 
 // Define the API base URL - adjust this to match your actual server URL
 const API_BASE_URL = `http://${window.location.hostname}:4243`;
@@ -14,12 +13,15 @@ let globalToolsCache = null;
 
 // This becomes our named export component
 export function ToolProvider({ children }) {
+  const { settings } = useSettings();
   const hasInitialized = useRef(false);
   const isCurrentlyFetching = useRef(false);
   
   // Initialize state with cached data if available
   const [tools, setTools] = useState(globalToolsCache || []);
   const [filteredTools, setFilteredTools] = useState(globalToolsCache || []);
+  const [newlyAddedId, setNewlyAddedId] = useState(null);
+  const shimmerTimerRef = useRef(null);
   
   // Use useLayoutEffect to run synchronously before browser paint
   useLayoutEffect(() => {
@@ -213,13 +215,19 @@ export function ToolProvider({ children }) {
         window.dispatchEvent(backupEvent);
       }, 500);
       
+      // Merge global + per-project env vars (project overrides global)
+      const globalVars = settings?.environment?.globalVariables || {};
+      const projectVars = tool.execution?.environment?.variables || {};
+      const mergedEnvVars = { ...globalVars, ...projectVars };
+
       // Actually execute the command
       try {
         await executeProcess(
           toolId,
           tool.execution.rootPath,
           tool.execution.command,
-          tool.execution.environment.activationCommand
+          tool.execution.environment.activationCommand,
+          mergedEnvVars
         );
         
         // Remove automatic URL opening
@@ -359,13 +367,18 @@ export function ToolProvider({ children }) {
       const newId = (Math.max(...tools.map(t => parseInt(t.id))) + 1).toString();
       const newAppWithId = { ...newApp, id: newId };
       const updatedTools = [...tools, newAppWithId];
-      
+
       setTools(updatedTools);
       setFilteredTools(prev => [...prev, newAppWithId]);
-      
+
       // Update global cache
       globalToolsCache = updatedTools;
-      
+
+      // Signal shimmer effect for the new card
+      if (shimmerTimerRef.current) clearTimeout(shimmerTimerRef.current);
+      setNewlyAddedId(newId);
+      shimmerTimerRef.current = setTimeout(() => setNewlyAddedId(null), 10000);
+
       await persistTools(updatedTools);
       return true;
     } catch (error) {
@@ -421,15 +434,16 @@ export function ToolProvider({ children }) {
   };
 
   return (
-    <ToolContext.Provider value={{ 
-      tools, 
-      filteredTools, 
+    <ToolContext.Provider value={{
+      tools,
+      filteredTools,
       filterTools,
       runApp,
       stopApp,
       addApp,
       updateApp,
       deleteApp,
+      newlyAddedId,
       updateToolRunningStatus: (toolId, isRunning) => {
         const updatedTools = tools.map(tool => 
           tool.id === toolId 

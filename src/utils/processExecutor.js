@@ -11,7 +11,7 @@ const API_BASE_URL = `http://${window.location.hostname}:4243`;
  * @param {string} envCommand - Optional environment activation command
  * @returns {Promise<Object>} - Result of the execution
  */
-export const executeProcess = async (toolId, rootPath, command, envCommand = '') => {
+export const executeProcess = async (toolId, rootPath, command, envCommand = '', envVariables = {}) => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/tools/run`, {
       method: 'POST',
@@ -22,7 +22,8 @@ export const executeProcess = async (toolId, rootPath, command, envCommand = '')
         toolId,
         rootPath,
         command,
-        envCommand
+        envCommand,
+        envVariables
       }),
     });
 

@@ -4,7 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { useNotification } from '../../hooks/useNotification';
 import { useRef, useEffect, useState } from 'react';
 
-function ToolCard({ tool, onEditClick, onDeleteClick }) {
+function ToolCard({ tool, isNew, onEditClick, onDeleteClick }) {
   const { runApp, stopApp } = useTools();
   const { isDarkMode } = useTheme();
   const { showNotification } = useNotification();
@@ -16,6 +16,25 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
   const [isStopping, setIsStopping] = useState(false);
   const [runError, setRunError] = useState(null);
   const [buttonState, setButtonState] = useState(isRunning ? 'stop' : 'run');
+  const [showShimmer, setShowShimmer] = useState(false);
+
+  // Scroll into view and trigger shimmer for newly added cards
+  useEffect(() => {
+    if (isNew && cardRef.current) {
+      // Small delay to let the card render in the DOM first
+      const scrollTimer = setTimeout(() => {
+        cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Start shimmer after scroll completes
+        setTimeout(() => setShowShimmer(true), 400);
+      }, 100);
+      // Auto-remove shimmer after 3 full cycles (~9s for 3s slide animation)
+      const clearTimer = setTimeout(() => setShowShimmer(false), 10000);
+      return () => {
+        clearTimeout(scrollTimer);
+        clearTimeout(clearTimer);
+      };
+    }
+  }, [isNew]);
 
   const firstGlowColor = isRunning
     ? (isDarkMode ? 'rgba(135, 203, 93, 0.2)' : 'rgba(135, 203, 93, 0.4)')
@@ -365,13 +384,14 @@ function ToolCard({ tool, onEditClick, onDeleteClick }) {
         h-[260px] w-[100%] flex flex-col justify-between overflow-hidden
         rounded-lg ${isRunning ? 'border' : 'border-2'}
         ${isDarkMode
-          ? isRunning 
-            ? 'border-[#bccc0f]/80 bg-black' 
+          ? isRunning
+            ? 'border-[#bccc0f]/80 bg-black'
             : 'border-[#bccc0f]/20 bg-neutral-900'
           : isRunning
-            ? 'border-[#bccc0f]/80 bg-gray-50' 
+            ? 'border-[#bccc0f]/80 bg-gray-50'
             : 'border-[#bccc0f]/40 bg-white'
         }
+        ${showShimmer ? 'shimmer-card' : ''}
       `}
       style={{
         '--card-bg': isDarkMode ? 'rgba(188,204,15,0.03)' : 'rgba(188,204,15,0.015)',
