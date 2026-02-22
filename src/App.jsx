@@ -4,6 +4,7 @@ import { ToolProvider } from './context/ToolContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { SoundProvider } from './context/SoundContext';
 import { TerminalProvider } from './context/TerminalContext';
 import { useTheme } from './hooks/useTheme';
 import { useTerminal } from './hooks/useTerminal';
@@ -64,6 +65,7 @@ function App() {
     <ThemeProvider>
       <NotificationProvider>
         <SettingsProvider>
+          <SoundProvider>
           <ToolProvider>
             <TerminalProvider>
               <Router>
@@ -71,6 +73,7 @@ function App() {
               </Router>
             </TerminalProvider>
           </ToolProvider>
+          </SoundProvider>
         </SettingsProvider>
       </NotificationProvider>
     </ThemeProvider>

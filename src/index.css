@@ -54,6 +54,38 @@ body {
   border-radius: inherit;
 }
 
+/* Shimmer effect for port badge after app starts */
+@keyframes shimmer-port-glow {
+  0%, 100% { box-shadow: 0 0 3px rgba(188, 204, 15, 0.2); }
+  50%      { box-shadow: 0 0 8px rgba(188, 204, 15, 0.6), 0 0 16px rgba(188, 204, 15, 0.3); }
+}
+
+@keyframes shimmer-port-slide {
+  0%   { left: -100%; }
+  50%  { left: 140%; }
+  100% { left: 140%; }
+}
+
+.shimmer-port {
+  position: relative;
+  overflow: hidden;
+  animation: shimmer-port-glow 1.5s ease 3;
+}
+
+.shimmer-port::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(188, 204, 15, 0.35), transparent);
+  animation: shimmer-port-slide 2s ease-in-out 3;
+  pointer-events: none;
+  z-index: 50;
+  border-radius: inherit;
+}
+
 /* Infinite shimmer variant for loading states */
 .shimmer-card-loop {
   position: relative;

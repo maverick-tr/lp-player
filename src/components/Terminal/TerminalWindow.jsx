@@ -59,12 +59,25 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
   const wasRunningRef = useRef(false);
   const intervalRef = useRef(null);
   const viewportRef = useRef(null);
+  const [portReadyMsg, setPortReadyMsg] = useState(null);
   
   // Sync local state with context state
   useEffect(() => {
     setIsMinimized(isTerminalMinimized);
   }, [isTerminalMinimized]);
   
+  // Listen for port-ready events to show "Ready" in minimized view
+  useEffect(() => {
+    const handler = (e) => {
+      const { toolName: name, port } = e.detail;
+      setPortReadyMsg(`${name} ready on :${port}`);
+      const timer = setTimeout(() => setPortReadyMsg(null), 5000);
+      return () => clearTimeout(timer);
+    };
+    window.addEventListener('port-ready', handler);
+    return () => window.removeEventListener('port-ready', handler);
+  }, []);
+
   // Get active tools (running processes)
   const activeTools = tools.filter(tool => tool.execution.isRunning);
   const [activeToolTab, setActiveToolTab] = useState(toolName);
@@ -415,10 +428,17 @@ const TerminalWindow = ({ isOpen, output, toolName, onClose, isConnected }) => {
                   </div>
                 )}
 
+                {/* Port ready indicator in minimized view */}
+                {isMinimized && portReadyMsg && (
+                  <div className={`ml-3 text-xs font-bold flex-shrink-0 ${isDarkMode ? 'text-[#bccc0f]' : 'text-[#4a5a06]'}`}>
+                    {portReadyMsg}
+                  </div>
+                )}
+
                 {/* Show output summary - in different styles based on minimized state */}
-                {activeTools.length > 0 && (
-                  <div 
-                    className={`ml-3 text-xs flex-shrink-0 ${isMinimized ? 'overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0' : ''} 
+                {activeTools.length > 0 && !portReadyMsg && (
+                  <div
+                    className={`ml-3 text-xs flex-shrink-0 ${isMinimized ? 'overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0' : ''}
                               ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}
                   >
                     {isMinimized ? getOutputSummary() : ''}

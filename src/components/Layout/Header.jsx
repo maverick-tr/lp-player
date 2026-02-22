@@ -1,34 +1,62 @@
 import { useTheme } from '../../hooks/useTheme';
-import { motion, useTransform, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, memo, useEffect } from 'react';
 import AddAppModal from '../Modals/AddAppModal';
 import UnifiedSettingsModal from '../Modals/UnifiedSettingsModal';
 import { useTools } from '../../hooks/useTools';
+import { useSound } from '../../hooks/useSound';
+import NowPlayingCard from './NowPlayingCard';
+
+const vinylContainerVariants = {
+  center: {
+    x: 0,
+    transition: { type: 'spring', stiffness: 300, damping: 25 }
+  },
+  left: {
+    x: -80,
+    transition: { type: 'spring', stiffness: 300, damping: 25 }
+  }
+};
+
+const cardVariants = {
+  hidden: {
+    x: 250,
+    opacity: 0,
+  },
+  visible: {
+    x: 0,
+    opacity: 1,
+    transition: { type: 'spring', stiffness: 300, damping: 25 }
+  },
+  exit: {
+    x: -120,
+    opacity: 0,
+    transition: { duration: 0.5 }
+  }
+};
 
 const Header = memo(function Header() {
   const { isDarkMode } = useTheme();
   const { tools } = useTools();
+  const { phase, nowPlaying, analyserRef } = useSound();
   const [showAddAppModal, setShowAddAppModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const rotate = useMotionValue(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinSpeed, setSpinSpeed] = useState(0);
+
+  const showCard = phase === 'slide-out' || phase === 'hold';
+  const vinylSlid = phase === 'slide-out' || phase === 'hold';
 
   // Count how many apps are currently running
   useEffect(() => {
     const runningApps = tools.filter(tool => tool.execution?.isRunning).length;
-    
+
     if (runningApps > 0) {
-      // Calculate spin speed based on number of running apps
-      // Base speed is 5 seconds per rotation, faster as more apps run
-      // Min rotation time is 1 second when all apps are running (assuming max of 10 apps)
-      const maxApps = 10; // Assume maximum 10 apps for full speed
-      const minDuration = 1; // 1 second for fastest rotation
-      const maxDuration = 5; // 5 seconds for slowest rotation
-      
-      // Calculate duration inversely proportional to number of running apps
+      const maxApps = 10;
+      const minDuration = 1;
+      const maxDuration = 5;
       const duration = maxDuration - ((runningApps / maxApps) * (maxDuration - minDuration));
-      
+
       setSpinSpeed(duration);
       setIsSpinning(true);
     } else {
@@ -63,36 +91,60 @@ const Header = memo(function Header() {
               </svg>
             </motion.button>
           </div>
-          
-          {/* Centered Logo */}
-          <div className="flex justify-center flex-1">
-            <motion.img 
-              src="/logo.png?v=1.0.0" 
-              alt="LP Player - Local Project Player" 
-              className="h-24 w-auto object-contain"
-              initial={{ scale: 1, rotate: 0 }}
-              animate={isSpinning ? {
-                rotate: 360,
-                transition: {
-                  duration: spinSpeed,
-                  ease: "linear",
-                  repeat: Infinity,
-                  repeatType: "loop"
-                }
-              } : {
-                scale: [1, 1.05, 1],
-                transition: {
-                  duration: 2,
-                  times: [0, 0.5, 1],
-                  repeat: Infinity,
-                  repeatDelay: 3
-                }
-              }}
-              whileHover={{ scale: 1.05 }}
-              style={{ originX: 0.5, originY: 0.5 }}
-            />
+
+          {/* Centered Logo + Now Playing */}
+          <div className="flex justify-center items-center flex-1 relative">
+            {/* Vinyl container: handles horizontal slide */}
+            <motion.div
+              variants={vinylContainerVariants}
+              animate={vinylSlid ? 'left' : 'center'}
+              initial="center"
+            >
+              {/* Inner img: handles spin rotation */}
+              <motion.img
+                src="/logo.png?v=1.0.0"
+                alt="LP Player - Local Project Player"
+                className="h-24 w-auto object-contain"
+                initial={{ scale: 1, rotate: 0 }}
+                animate={isSpinning ? {
+                  rotate: 360,
+                  transition: {
+                    duration: spinSpeed,
+                    ease: "linear",
+                    repeat: Infinity,
+                    repeatType: "loop"
+                  }
+                } : {
+                  scale: [1, 1.05, 1],
+                  transition: {
+                    duration: 2,
+                    times: [0, 0.5, 1],
+                    repeat: Infinity,
+                    repeatDelay: 3
+                  }
+                }}
+                whileHover={{ scale: 1.05 }}
+                style={{ originX: 0.5, originY: 0.5 }}
+              />
+            </motion.div>
+
+            {/* Now Playing Card */}
+            <AnimatePresence>
+              {showCard && nowPlaying && (
+                <motion.div
+                  key="now-playing"
+                  className="absolute left-1/2 -ml-2"
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                >
+                  <NowPlayingCard nowPlaying={nowPlaying} analyserRef={analyserRef} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          
+
           {/* Settings on right */}
           <div className="w-10">
             <motion.button
@@ -102,8 +154,8 @@ const Header = memo(function Header() {
               className={`
                 flex items-center justify-center w-8 h-8 rounded-full
                 ${isDarkMode
-                  ? 'bg-tool-light text-gray-400 hover:text-[#bccc0f] hover:bg-tool-accent-light'
-                  : 'bg-tool-light-mode-card text-gray-500 hover:text-tool-light-mode-accent hover:bg-gray-200'
+                  ? 'bg-tool-light text-[#bccc0f] hover:bg-tool-accent-light'
+                  : 'bg-tool-light-mode-card text-tool-light-mode-accent hover:bg-gray-200'
                 }
                 transition-colors duration-200
               `}
@@ -126,4 +178,4 @@ const Header = memo(function Header() {
   );
 });
 
-export default Header; 
+export default Header;

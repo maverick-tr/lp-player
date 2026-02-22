@@ -25,6 +25,10 @@ function UnifiedSettingsModal({ onClose }) {
   // Environment state
   const [envEntries, setEnvEntries] = useState([]);
 
+  // Sound state
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundGenre, setSoundGenre] = useState('90s pop');
+
   // Save state
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -46,6 +50,10 @@ function UnifiedSettingsModal({ onClose }) {
       const globalVars = settings.environment?.globalVariables || {};
       const entries = Object.entries(globalVars).map(([key, value]) => ({ key, value }));
       setEnvEntries(entries.length > 0 ? entries : []);
+
+      // Load sound settings
+      setSoundEnabled(settings.soundEffects?.enabled !== false);
+      setSoundGenre(settings.soundEffects?.genre || '90s pop');
     }
   }, [settings]);
 
@@ -81,6 +89,12 @@ function UnifiedSettingsModal({ onClose }) {
         }
       });
       updates.environment = { globalVariables };
+    } else if (tabIndex === 4) {
+      // Sound tab
+      updates.soundEffects = {
+        enabled: soundEnabled,
+        genre: soundGenre
+      };
     }
 
     const ok = await updateSettings(updates);
@@ -128,7 +142,7 @@ function UnifiedSettingsModal({ onClose }) {
 
   const labelClass = `block text-xs font-medium mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`;
 
-  const tabNames = ['Appearance', 'AI', 'Installation', 'Environment'];
+  const tabNames = ['Appearance', 'AI', 'Installation', 'Environment', 'Sound'];
 
   return (
     <Dialog open={true} onClose={onClose} className="relative z-50">
@@ -389,6 +403,40 @@ function UnifiedSettingsModal({ onClose }) {
                         </svg>
                         Add Variable
                       </button>
+                    </Tab.Panel>
+
+                    {/* ---- Sound Tab ---- */}
+                    <Tab.Panel className="space-y-4">
+                      <Toggle
+                        label="Sound Effects"
+                        description="Play vinyl crackle and music preview when launching a project"
+                        value={soundEnabled}
+                        onChange={setSoundEnabled}
+                        isDarkMode={isDarkMode}
+                      />
+
+                      <div>
+                        <label className={labelClass}>Music Genre</label>
+                        <select
+                          value={soundGenre}
+                          onChange={e => setSoundGenre(e.target.value)}
+                          className={`${inputClass} cursor-pointer`}
+                        >
+                          <option value="90s pop">90s Pop</option>
+                          <option value="80s rock">80s Rock</option>
+                          <option value="jazz">Jazz</option>
+                          <option value="classical">Classical</option>
+                          <option value="electronic">Electronic</option>
+                          <option value="lo-fi">Lo-Fi</option>
+                          <option value="hip hop">Hip Hop</option>
+                          <option value="r&b/soul">R&B / Soul</option>
+                          <option value="funk">Funk</option>
+                          <option value="ambient">Ambient</option>
+                        </select>
+                        <p className={`text-xs mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          A random track preview from this genre plays each time you launch a project.
+                        </p>
+                      </div>
                     </Tab.Panel>
                   </Tab.Panels>
 

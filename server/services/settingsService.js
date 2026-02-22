@@ -1,10 +1,7 @@
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { SETTINGS_FILE } from './dataDir.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const SETTINGS_PATH = path.join(__dirname, '..', '..', 'src', 'data', 'settings.json');
+const SETTINGS_PATH = SETTINGS_FILE;
 
 const DEFAULT_SETTINGS = {
   ai: {
@@ -21,6 +18,10 @@ const DEFAULT_SETTINGS = {
   },
   environment: {
     globalVariables: {}
+  },
+  soundEffects: {
+    enabled: true,
+    genre: '90s pop'
   }
 };
 
@@ -47,7 +48,8 @@ function writeSettings(settings) {
       // Replace environment entirely when present (so deleted vars don't persist)
       environment: settings.environment !== undefined
         ? { globalVariables: {}, ...settings.environment }
-        : (current.environment || { globalVariables: {} })
+        : (current.environment || { globalVariables: {} }),
+      soundEffects: { ...current.soundEffects, ...settings.soundEffects }
     };
     fs.writeFileSync(SETTINGS_PATH, JSON.stringify(merged, null, 2));
     return merged;

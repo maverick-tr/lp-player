@@ -2,8 +2,7 @@ import { createContext, useState, useCallback, useRef, useLayoutEffect } from 'r
 import { executeProcess, killProcess, openInBrowser } from '../utils/processExecutor';
 import { useSettings } from '../hooks/useSettings';
 
-// Define the API base URL - adjust this to match your actual server URL
-const API_BASE_URL = `http://${window.location.hostname}:4243`;
+const API_BASE_URL = window.location.origin;
 
 // Export the context directly
 export const ToolContext = createContext();
@@ -207,6 +206,9 @@ export function ToolProvider({ children }) {
       console.log(`Dispatching open-terminal event for tool ${toolId}`);
       const terminalEvent = new CustomEvent('open-terminal', { detail: { toolId } });
       window.dispatchEvent(terminalEvent);
+
+      // Trigger sound/animation launch sequence
+      window.dispatchEvent(new CustomEvent('app-launched', { detail: { tool } }));
       
       // Add a backup event dispatch in case the first one wasn't caught
       setTimeout(() => {

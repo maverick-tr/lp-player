@@ -17,6 +17,8 @@ function ToolCard({ tool, isNew, onEditClick, onDeleteClick }) {
   const [runError, setRunError] = useState(null);
   const [buttonState, setButtonState] = useState(isRunning ? 'stop' : 'run');
   const [showShimmer, setShowShimmer] = useState(false);
+  const [showPortShimmer, setShowPortShimmer] = useState(false);
+  const prevRunningRef = useRef(isRunning);
 
   // Scroll into view and trigger shimmer for newly added cards
   useEffect(() => {
@@ -35,6 +37,50 @@ function ToolCard({ tool, isNew, onEditClick, onDeleteClick }) {
       };
     }
   }, [isNew]);
+
+  // Poll port after app starts running, trigger shimmer when it responds
+  useEffect(() => {
+    if (isRunning && !prevRunningRef.current && tool.port) {
+      let cancelled = false;
+      let pollTimer = null;
+
+      const checkPort = async () => {
+        try {
+          await fetch(`http://localhost:${tool.port}`, {
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-store',
+          });
+          // no-cors fetch resolves (even opaque) once the server is listening
+          if (!cancelled) {
+            setShowPortShimmer(true);
+            window.dispatchEvent(new CustomEvent('port-ready', {
+              detail: { toolName: tool.name, port: tool.port }
+            }));
+            const clearTimer = setTimeout(() => setShowPortShimmer(false), 6500);
+            return () => clearTimeout(clearTimer);
+          }
+        } catch {
+          // Server not up yet — retry
+          if (!cancelled) {
+            pollTimer = setTimeout(checkPort, 1500);
+          }
+        }
+      };
+
+      // Start polling after a brief initial delay
+      pollTimer = setTimeout(checkPort, 2000);
+
+      return () => {
+        cancelled = true;
+        if (pollTimer) clearTimeout(pollTimer);
+      };
+    }
+    if (!isRunning && prevRunningRef.current) {
+      setShowPortShimmer(false);
+    }
+    prevRunningRef.current = isRunning;
+  }, [isRunning, tool.port, tool.name]);
 
   const firstGlowColor = isRunning
     ? (isDarkMode ? 'rgba(135, 203, 93, 0.2)' : 'rgba(135, 203, 93, 0.4)')
@@ -656,16 +702,18 @@ function ToolCard({ tool, isNew, onEditClick, onDeleteClick }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => {
-                    // Only allow clicking if the app is running
                     if (!isRunning) {
                       e.preventDefault();
                       showNotification('App must be running to access the URL', 'warning');
+                    } else {
+                      setShowPortShimmer(false);
                     }
                   }}
                   className={`ml-2 px-2 py-0.5 rounded text-[10px] whitespace-nowrap flex-shrink-0
-                    ${isDarkMode 
-                      ? 'bg-[#bccc0f]/20 text-[#bccc0f] hover:bg-[#bccc0f]/30' 
-                      : 'bg-[#bccc0f]/20 text-[#857c00] hover:bg-[#bccc0f]/30'}`}
+                    ${isDarkMode
+                      ? 'bg-[#bccc0f]/20 text-[#bccc0f] hover:bg-[#bccc0f]/30'
+                      : 'bg-[#bccc0f]/20 text-[#857c00] hover:bg-[#bccc0f]/30'}
+                    ${showPortShimmer ? 'shimmer-port' : ''}`}
                 >
                   Port: {tool.port}
                 </a>
