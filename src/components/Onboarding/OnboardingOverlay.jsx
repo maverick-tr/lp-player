@@ -11,14 +11,7 @@ const steps = [
     target: null,
     title: 'Welcome to LP Player',
     description: 'Your personal dashboard for managing local projects. Let\u2019s take a quick tour.',
-    icon: (
-      <svg viewBox="0 0 48 48" fill="none" className="w-16 h-16">
-        <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
-        <circle cx="24" cy="24" r="14" stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" opacity="0.2" />
-        <circle cx="24" cy="24" r="5" fill="currentColor" opacity="0.8" />
-        <path d="M24 2v6M24 40v6M2 24h6M40 24h6" stroke="currentColor" strokeWidth="1" opacity="0.15" />
-      </svg>
-    ),
+    icon: <img src="/logo.png" alt="LP Player" className="w-20 h-20 rounded-full" />,
   },
   {
     id: 'add-app',
@@ -51,12 +44,7 @@ const steps = [
     target: null,
     title: 'You\u2019re All Set',
     description: 'Add a project, hit the power knob, and watch it spin up. Real-time terminal, system monitoring, and instant search \u2014 all in one dashboard.',
-    icon: (
-      <svg viewBox="0 0 48 48" fill="none" className="w-16 h-16">
-        <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="1.5" opacity="0.3" />
-        <polygon points="20,16 20,32 34,24" fill="currentColor" opacity="0.8" />
-      </svg>
-    ),
+    icon: <img src="/logo.png" alt="LP Player" className="w-20 h-20 rounded-full" />,
   },
 ];
 
