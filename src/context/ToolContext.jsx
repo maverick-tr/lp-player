@@ -10,6 +10,9 @@ export const ToolContext = createContext();
 // Keep loaded data between component unmounts/remounts for StrictMode
 let globalToolsCache = null;
 
+// Debounce timer for updateToolRunningStatus persistence
+let _statusPersistTimer = null;
+
 // This becomes our named export component
 export function ToolProvider({ children }) {
   const { settings } = useSettings();
@@ -418,25 +421,32 @@ export function ToolProvider({ children }) {
       deleteApp,
       newlyAddedId,
       updateToolRunningStatus: (toolId, isRunning) => {
-        const updatedTools = tools.map(tool => 
-          tool.id === toolId 
-            ? { ...tool, execution: { ...tool.execution, isRunning } } 
-            : tool
-        );
-        
-        setTools(updatedTools);
-        setFilteredTools(prev => 
-          prev.map(tool => 
-            tool.id === toolId 
-              ? { ...tool, execution: { ...tool.execution, isRunning } } 
+        // Use functional updater to always read the LATEST state
+        let updatedTools;
+        setTools(prev => {
+          updatedTools = prev.map(tool =>
+            tool.id === toolId
+              ? { ...tool, execution: { ...tool.execution, isRunning } }
+              : tool
+          );
+          return updatedTools;
+        });
+        setFilteredTools(prev =>
+          prev.map(tool =>
+            tool.id === toolId
+              ? { ...tool, execution: { ...tool.execution, isRunning } }
               : tool
           )
         );
-        
-        // Update global cache
-        globalToolsCache = updatedTools;
-        
-        persistTools(updatedTools);
+
+        // Persist after a short delay to batch rapid updates
+        clearTimeout(_statusPersistTimer);
+        _statusPersistTimer = setTimeout(() => {
+          if (updatedTools) {
+            globalToolsCache = updatedTools;
+            persistTools(updatedTools);
+          }
+        }, 300);
       }
     }}>
       {children}
