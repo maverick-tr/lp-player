@@ -21,10 +21,20 @@ ensure_concurrently() {
   fi
 }
 
-# Check if clean flag is provided
+# Check for flags
 CLEAN_BUILD=false
-if [ "$2" == "clean" ]; then
-  CLEAN_BUILD=true
+ONBOARDING=false
+for arg in "$@"; do
+  case "$arg" in
+    clean) CLEAN_BUILD=true ;;
+    onboarding) ONBOARDING=true ;;
+  esac
+done
+
+# If onboarding flag passed, set env var so the frontend resets the onboarding state
+if [ "$ONBOARDING" == "true" ]; then
+  echo -e "\033[1;36mOnboarding mode: overlay will show on launch\033[0m"
+  export VITE_RESET_ONBOARDING=true
 fi
 
 # Check if production mode is requested

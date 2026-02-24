@@ -115,6 +115,11 @@ export default function OnboardingOverlay() {
 
   // Check if onboarding should show
   useEffect(() => {
+    // Dev override: VITE_RESET_ONBOARDING=true resets the flag
+    if (import.meta.env.VITE_RESET_ONBOARDING === 'true') {
+      localStorage.removeItem(ONBOARDING_KEY);
+    }
+
     const done = localStorage.getItem(ONBOARDING_KEY);
     if (!done) {
       // Small delay so the app finishes rendering

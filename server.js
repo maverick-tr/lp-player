@@ -325,6 +325,17 @@ function broadcastProcessOutput(toolId, data, outputType = 'stdout') {
 
 // TOOLS_FILE imported from server/services/dataDir.js
 
+// Write lock to prevent concurrent writes corrupting tools.json
+let toolsWriteLock = Promise.resolve();
+async function safeWriteTools(data) {
+  toolsWriteLock = toolsWriteLock.then(async () => {
+    await fs.writeFile(TOOLS_FILE, JSON.stringify(data, null, 2), 'utf8');
+  }).catch(err => {
+    console.error('Error in safeWriteTools:', err);
+  });
+  return toolsWriteLock;
+}
+
 // ── Settings API ──────────────────────────────────────────────
 
 app.get('/api/settings', (req, res) => {
@@ -587,7 +598,7 @@ app.post('/api/tools', async (req, res) => {
     const updatedData = { ...currentData, tools };
     
     // Write updated data back to file
-    await fs.writeFile(TOOLS_FILE, JSON.stringify(updatedData, null, 2), 'utf8');
+    await safeWriteTools(updatedData);
     
     res.json({ success: true, message: 'Tools updated successfully' });
   } catch (error) {

@@ -180,25 +180,26 @@ export function ToolProvider({ children }) {
         throw new Error('Tool not found');
       }
 
-      // Mark app as running
-      const updatedTools = tools.map(t => 
-        t.id === toolId 
-          ? { ...t, execution: { ...t.execution, isRunning: true, error: null } } 
-          : t
-      );
-      
-      setTools(updatedTools);
-      setFilteredTools(prev => 
-        prev.map(t => 
-          t.id === toolId 
-            ? { ...t, execution: { ...t.execution, isRunning: true, error: null } } 
+      // Mark app as running — use functional updater for latest state
+      let updatedTools;
+      setTools(prev => {
+        updatedTools = prev.map(t =>
+          t.id === toolId
+            ? { ...t, execution: { ...t.execution, isRunning: true, error: null } }
+            : t
+        );
+        return updatedTools;
+      });
+      setFilteredTools(prev =>
+        prev.map(t =>
+          t.id === toolId
+            ? { ...t, execution: { ...t.execution, isRunning: true, error: null } }
             : t
         )
       );
-      
+
       // Update global cache
-      globalToolsCache = updatedTools;
-      
+      if (updatedTools) globalToolsCache = updatedTools;
       await persistTools(updatedTools);
       
       // Trigger terminal window opening for this toolId
@@ -237,41 +238,28 @@ export function ToolProvider({ children }) {
       } catch (execError) {
         console.error('Failed to execute process:', execError);
         
-        // Update the tool with the error
-        const erroredTools = tools.map(t => 
-          t.id === toolId 
-            ? { 
-                ...t, 
-                execution: { 
-                  ...t.execution, 
-                  isRunning: false, 
-                  error: execError.message || 'Failed to run app' 
-                } 
-              } 
-            : t
-        );
-        
-        setTools(erroredTools);
-        setFilteredTools(prev => 
-          prev.map(t => 
-            t.id === toolId 
-              ? { 
-                  ...t, 
-                  execution: { 
-                    ...t.execution, 
-                    isRunning: false, 
-                    error: execError.message || 'Failed to run app' 
-                  } 
-                } 
+        // Update the tool with the error — functional updater for latest state
+        let erroredTools;
+        setTools(prev => {
+          erroredTools = prev.map(t =>
+            t.id === toolId
+              ? { ...t, execution: { ...t.execution, isRunning: false, error: execError.message || 'Failed to run app' } }
+              : t
+          );
+          return erroredTools;
+        });
+        setFilteredTools(prev =>
+          prev.map(t =>
+            t.id === toolId
+              ? { ...t, execution: { ...t.execution, isRunning: false, error: execError.message || 'Failed to run app' } }
               : t
           )
         );
-        
-        // Update global cache
-        globalToolsCache = erroredTools;
-        
-        await persistTools(erroredTools);
-        
+
+        if (erroredTools) {
+          globalToolsCache = erroredTools;
+          await persistTools(erroredTools);
+        }
         throw execError;
       }
       
@@ -279,40 +267,28 @@ export function ToolProvider({ children }) {
     } catch (error) {
       console.error('Failed to run app:', error);
 
-      // Update tool with error
-      const updatedTools = tools.map(tool => 
-        tool.id === toolId 
-          ? { 
-              ...tool, 
-              execution: { 
-                ...tool.execution, 
-                isRunning: false, 
-                error: error.message || 'Failed to run app' 
-              } 
-            } 
-          : tool
-      );
-      
-      setTools(updatedTools);
-      setFilteredTools(prev => 
-        prev.map(tool => 
-          tool.id === toolId 
-            ? { 
-                ...tool, 
-                execution: { 
-                  ...tool.execution, 
-                  isRunning: false, 
-                  error: error.message || 'Failed to run app' 
-                } 
-              } 
+      // Update tool with error — functional updater for latest state
+      let errorTools;
+      setTools(prev => {
+        errorTools = prev.map(tool =>
+          tool.id === toolId
+            ? { ...tool, execution: { ...tool.execution, isRunning: false, error: error.message || 'Failed to run app' } }
+            : tool
+        );
+        return errorTools;
+      });
+      setFilteredTools(prev =>
+        prev.map(tool =>
+          tool.id === toolId
+            ? { ...tool, execution: { ...tool.execution, isRunning: false, error: error.message || 'Failed to run app' } }
             : tool
         )
       );
-      
-      // Update global cache
-      globalToolsCache = updatedTools;
-      
-      await persistTools(updatedTools);
+
+      if (errorTools) {
+        globalToolsCache = errorTools;
+        await persistTools(errorTools);
+      }
       return { 
         success: false, 
         error: error.message || 'Failed to run app' 
@@ -325,41 +301,36 @@ export function ToolProvider({ children }) {
       // Kill the process first
       console.log(`Stopping app with ID ${toolId}`);
       await killProcess(toolId);
-      
-      // Get current running tools before the update
-      const runningToolsBefore = tools.filter(t => t.execution.isRunning).map(t => t.id);
-      console.log(`Currently running tools before stopping: ${JSON.stringify(runningToolsBefore)}`);
-      
-      // Important: ONLY set the specified tool to not running, don't modify other tools
-      const updatedTools = tools.map(tool => 
-        tool.id === toolId 
-          ? { ...tool, execution: { ...tool.execution, isRunning: false } } 
-          : tool // Important - preserve the exact state of other tools
-      );
-      
-      // Check which tools are running after the update
-      const runningToolsAfter = updatedTools.filter(t => t.execution.isRunning).map(t => t.id);
-      console.log(`Running tools after stopping: ${JSON.stringify(runningToolsAfter)}`);
-      
-      setTools(updatedTools);
-      setFilteredTools(prev => 
-        prev.map(tool => 
-          tool.id === toolId 
-            ? { ...tool, execution: { ...tool.execution, isRunning: false } } 
-            : tool // Important - preserve the exact state of other tools
+
+      // Use functional updater to read the LATEST state, not stale closure
+      let updatedTools;
+      setTools(prev => {
+        updatedTools = prev.map(tool =>
+          tool.id === toolId
+            ? { ...tool, execution: { ...tool.execution, isRunning: false } }
+            : tool
+        );
+        return updatedTools;
+      });
+      setFilteredTools(prev =>
+        prev.map(tool =>
+          tool.id === toolId
+            ? { ...tool, execution: { ...tool.execution, isRunning: false } }
+            : tool
         )
       );
-      
-      // Update global cache
-      globalToolsCache = updatedTools;
-      
-      await persistTools(updatedTools);
+
+      // Update global cache with latest
+      if (updatedTools) {
+        globalToolsCache = updatedTools;
+        await persistTools(updatedTools);
+      }
       return { success: true };
     } catch (error) {
       console.error('Failed to stop app:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to stop app' 
+      return {
+        success: false,
+        error: error.message || 'Failed to stop app'
       };
     }
   };
