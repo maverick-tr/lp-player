@@ -13,9 +13,10 @@ const SystemMonitor = memo(function SystemMonitor({ name, type }) {
   useEffect(() => {
     // Subscribe to real system stats via WebSocket
     const setupSystemStatsSocket = () => {
-      // Use the same hostname/port as the current page
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.hostname}:4243`;
+      const wsUrl = import.meta.env.DEV
+        ? `${protocol}//${window.location.hostname}:4243`
+        : `${protocol}//${window.location.host}`;
       
       try {
         // Close existing socket if any
@@ -83,7 +84,7 @@ const SystemMonitor = memo(function SystemMonitor({ name, type }) {
         
         const fetchData = async () => {
           try {
-            const response = await fetch(`http://${window.location.hostname}:4243/api/system-stats`);
+            const response = await fetch(`${window.location.origin}/api/system-stats`);
             
             if (response.ok) {
               const data = await response.json();

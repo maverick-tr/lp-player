@@ -1,1 +1,7 @@
 node_modules
+build/
+*.tgz
+logs/
+.DS_Store
+src/data/tools.json
+src/data/settings.json

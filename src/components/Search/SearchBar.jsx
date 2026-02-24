@@ -55,7 +55,7 @@ const SearchBar = memo(function SearchBar() {
         onChange={handleSearchChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        placeholder="Search tools by name, URL, or tags..."
+        placeholder="Search projects by name, URL, or tags..."
         className={`
           w-full px-4 py-3 pl-12
           rounded-xl

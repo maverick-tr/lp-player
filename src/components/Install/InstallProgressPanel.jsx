@@ -236,7 +236,7 @@ function InstallProgressPanel({ installState, installId, onAnswer, onCancel, isD
                 <button
                   type="button"
                   onClick={() => {
-                    window.open(`http://${window.location.hostname}:4243/api/install/log/${installId}`, '_blank');
+                    window.open(`${window.location.origin}/api/install/log/${installId}`, '_blank');
                   }}
                   className={`text-xs px-2 py-0.5 rounded ${isDarkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-200 text-gray-600 hover:text-black'}`}
                 >

@@ -28,7 +28,7 @@ const Footer = memo(function Footer() {
           text-xs font-medium
           ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}
         `}>
-          LP Player - Local Project Player © 2025
+          LP Player - Local Project Player by <a href="https://github.com/maverick-tr" target="_blank" rel="noopener noreferrer" className={`hover:underline ${isDarkMode ? 'text-[#bccc0f]/60 hover:text-[#bccc0f]' : 'text-[#7a8a0b] hover:text-[#4a5a06]'}`}>maverick-tr</a>
         </span>
         <SystemMonitor name="Memory" type="memory" />
       </div>

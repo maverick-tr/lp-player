@@ -230,7 +230,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
     setFetchingLogo(true);
     setError('');
     try {
-      const res = await fetch(`http://${window.location.hostname}:4243/api/fetch-image`, {
+      const res = await fetch(`${window.location.origin}/api/fetch-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
@@ -324,7 +324,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
 
     try {
       // Make an API call to check if various environment files exist
-      const response = await fetch(`http://${window.location.hostname}:4243/api/detect-environment`, {
+      const response = await fetch(`${window.location.origin}/api/detect-environment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -393,7 +393,11 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       wsRef.current.close();
     }
 
-    const ws = new WebSocket(`ws://${window.location.hostname}:4243`);
+    const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = import.meta.env.DEV
+      ? `${wsProto}//${window.location.hostname}:4243`
+      : `${wsProto}//${window.location.host}`;
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -460,6 +464,37 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
     };
   }, [addApp]);
 
+  const [cloneProgress, setCloneProgress] = useState(null); // null | 'cloning' | 'done' | 'error'
+
+  const handleGitClone = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!gitRepoUrl) { setError('Git repository URL is required'); return; }
+    if (!gitTargetPath) { setError('Target directory is required'); return; }
+
+    setCloneProgress('cloning');
+    try {
+      const response = await fetch(`${window.location.origin}/api/git-clone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl: gitRepoUrl, targetPath: gitTargetPath })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Clone failed');
+      setCloneProgress('done');
+      // Pre-fill the manual form with cloned path
+      setAppData(prev => ({
+        ...prev,
+        name: data.repoName || '',
+        execution: { ...prev.execution, rootPath: data.clonedPath || gitTargetPath }
+      }));
+    } catch (err) {
+      setError(err.message);
+      setCloneProgress('error');
+    }
+  };
+
   const handleGitInstall = async (e) => {
     e.preventDefault();
     setError('');
@@ -478,7 +513,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
     setInstallState({ phase: 'starting', plan: null, steps: [], question: null, error: null });
 
     try {
-      const response = await fetch(`http://${window.location.hostname}:4243/api/install/start`, {
+      const response = await fetch(`${window.location.origin}/api/install/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoUrl: gitRepoUrl, targetPath: gitTargetPath })
@@ -513,7 +548,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
   const handleInstallCancel = useCallback(async () => {
     if (installId) {
       try {
-        await fetch(`http://${window.location.hostname}:4243/api/install/cancel/${installId}`, {
+        await fetch(`${window.location.origin}/api/install/cancel/${installId}`, {
           method: 'POST'
         });
       } catch { /* ignore */ }
@@ -640,7 +675,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
             text-lg font-bold mb-3
             ${isDarkMode ? 'text-[#bccc0f]/80' : 'text-[#4a5a06]'}
           `}>
-            {showGitInstall ? 'Install from Git' : isEditing ? 'Edit App' : 'Add New App'}
+            {showGitInstall ? (isAiConfigured ? 'Install from Git' : 'Clone from Git') : isEditing ? 'Edit App' : 'Add New App'}
           </Dialog.Title>
 
           {showGitInstall ? (
@@ -654,17 +689,43 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                   AI-powered install
                 </div>
               ) : (
-                <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${
-                  isDarkMode ? 'bg-yellow-900/30 text-yellow-400' : 'bg-yellow-50 text-yellow-700'
+                <div className={`text-xs px-2 py-1.5 rounded ${
+                  isDarkMode ? 'bg-yellow-900/20 text-yellow-400/80' : 'bg-yellow-50 text-yellow-700'
                 }`}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-                  AI not configured — <span className="underline cursor-pointer" onClick={() => { /* user can open settings from header */ }}>configure in Settings</span>
+                  Clone the repository to a local folder. Configure AI in Settings for automated dependency installation and setup.
                 </div>
               )}
 
               {/* Show form if not yet installing */}
               {!installState ? (
-                <form onSubmit={handleGitInstall} className="space-y-3">
+                cloneProgress === 'done' ? (
+                  /* Clone succeeded — prompt user to fill in the rest manually */
+                  <div className="space-y-3">
+                    <div className={`flex items-center gap-2 text-sm px-2 py-2 rounded ${
+                      isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-700'
+                    }`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      Repository cloned successfully
+                    </div>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Now fill in the start command and other details to add it as a project.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => { setCloneProgress(null); setShowGitInstall(false); }}
+                      className={`w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        isDarkMode
+                          ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
+                          : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
+                      }`}
+                    >
+                      Continue Setup
+                    </button>
+                  </div>
+                ) : (
+                <form onSubmit={isAiConfigured ? handleGitInstall : handleGitClone} className="space-y-3">
                   <div>
                     <label className={`block text-sm mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Git Repository URL*
@@ -687,7 +748,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       type="text"
                       value={gitTargetPath}
                       onChange={(e) => setGitTargetPath(e.target.value)}
-                      placeholder="/path/to/install"
+                      placeholder="/path/to/clone"
                       className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                       required
                     />
@@ -698,7 +759,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                   <div className="flex justify-between pt-2">
                     <button
                       type="button"
-                      onClick={handleBackFromGitInstall}
+                      onClick={() => { setCloneProgress(null); handleBackFromGitInstall(); }}
                       className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                         isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-black'
                       }`}
@@ -707,16 +768,18 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                     </button>
                     <button
                       type="submit"
+                      disabled={cloneProgress === 'cloning'}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         isDarkMode
                           ? 'bg-[#bccc0f]/70 text-black hover:bg-[#bccc0f]/60'
                           : 'bg-[#7a8a0b] text-white hover:bg-[#6b7a08]'
-                      }`}
+                      } ${cloneProgress === 'cloning' ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      Install
+                      {cloneProgress === 'cloning' ? 'Cloning...' : (isAiConfigured ? 'Install' : 'Clone')}
                     </button>
                   </div>
                 </form>
+                )
               ) : (
                 /* Install in progress — show progress panel */
                 <div className="space-y-3">
@@ -766,7 +829,7 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                   onClick={() => setShowGitInstall(true)}
                   className={`px-4 py-2 rounded-md ${isDarkMode ? 'bg-[#bccc0f]/70 hover:bg-[#bccc0f]/60 text-black' : 'bg-[#7a8a0b] hover:bg-[#6b7a08] text-white'}`}
                 >
-                  Install from Git Repository
+                  {isAiConfigured ? 'Install from Git Repository' : 'Clone from Git'}
                 </button>
               </div>
 

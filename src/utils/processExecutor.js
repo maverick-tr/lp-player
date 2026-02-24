@@ -1,7 +1,5 @@
 // Process executor utility through server API
-
-// Define the API base URL - adjust this to match your actual server URL
-const API_BASE_URL = `http://${window.location.hostname}:4243`;
+const API_BASE_URL = window.location.origin;
 
 /**
  * Execute a command in a given directory with optional environment setup

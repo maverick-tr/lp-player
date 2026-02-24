@@ -9,6 +9,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import os from 'os';
 import { readSettings, writeSettings, redactForFrontend } from './server/services/settingsService.js';
 import { startInstallation, getInstallation, resolveQuestion, cancelInstallation, getInstallLog } from './server/services/installService.js';
+import { TOOLS_FILE } from './server/services/dataDir.js';
 
 // Get current file directory (ESM replacement for __dirname)
 const __filename = fileURLToPath(import.meta.url);
@@ -17,7 +18,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 // Parse command line arguments for port
 const args = process.argv.slice(2);
-let PORT = process.env.PORT || 4242;
+let PORT = process.env.PORT || 4243;
 let HOST = process.env.HOST || 'localhost';
 
 // Parse command line arguments
@@ -322,8 +323,7 @@ function broadcastProcessOutput(toolId, data, outputType = 'stdout') {
   console.log(`Broadcast complete. Sent to ${clientCount} clients.`);
 }
 
-// Constants
-const TOOLS_FILE = path.join(__dirname, 'src/data/tools.json');
+// TOOLS_FILE imported from server/services/dataDir.js
 
 // ── Settings API ──────────────────────────────────────────────
 
@@ -520,6 +520,39 @@ app.post('/api/fetch-image', async (req, res) => {
   } catch (error) {
     console.error('Error fetching image:', error.message);
     res.status(500).json({ error: `Failed to fetch image: ${error.message}` });
+  }
+});
+
+// ── Git Clone API (no AI required) ────────────────────────────
+
+app.post('/api/git-clone', async (req, res) => {
+  try {
+    const { repoUrl } = req.body;
+    let { targetPath } = req.body;
+    if (!repoUrl || !targetPath) {
+      return res.status(400).json({ error: 'repoUrl and targetPath are required' });
+    }
+
+    targetPath = targetPath.trim();
+    if (targetPath.startsWith('~/') || targetPath === '~') {
+      targetPath = path.join(os.homedir(), targetPath.slice(1));
+    }
+    targetPath = path.resolve(targetPath);
+
+    const repoName = repoUrl.replace(/\.git$/, '').split('/').pop() || 'project';
+    const clonedPath = path.join(targetPath, repoName);
+
+    await new Promise((resolve, reject) => {
+      exec(`git clone "${repoUrl}" "${clonedPath}"`, { timeout: 120000 }, (err, stdout, stderr) => {
+        if (err) reject(new Error(stderr || err.message));
+        else resolve(stdout);
+      });
+    });
+
+    res.json({ success: true, clonedPath, repoName });
+  } catch (error) {
+    console.error('Git clone error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 

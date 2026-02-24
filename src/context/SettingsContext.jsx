@@ -3,7 +3,7 @@ import { createContext, useState, useEffect, useCallback } from 'react';
 export const SettingsContext = createContext();
 
 const STORAGE_KEY = 'lap_settings';
-const API_BASE = `http://${window.location.hostname}:4243`;
+const API_BASE = window.location.origin;
 
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(null);

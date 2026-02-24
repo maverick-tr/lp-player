@@ -1,8 +1,8 @@
 {
   "ai": {
-    "apiUrl": "",
-    "apiKey": "",
-    "model": ""
+    "apiUrl": "http://192.168.24.6:8124/v1",
+    "apiKey": "123456",
+    "model": "ora-m2.1"
   },
   "installation": {
     "autoConfirmPortChanges": false,
@@ -13,5 +13,9 @@
   },
   "environment": {
     "globalVariables": {}
+  },
+  "soundEffects": {
+    "enabled": true,
+    "genre": "90s pop"
   }
 }

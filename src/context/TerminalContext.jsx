@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useTools } from '../hooks/useTools';
 
-// Use the same base URL as in other files
-const API_BASE_URL = `http://${window.location.hostname}:4243`;
-const WS_BASE_URL = `ws://${window.location.hostname}:4243`;
+const API_BASE_URL = window.location.origin;
+// In dev mode (Vite), WebSocket must connect to the API server port directly
+const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_BASE_URL = import.meta.env.DEV
+  ? `${wsProto}//${window.location.hostname}:4243`
+  : `${wsProto}//${window.location.host}`;
 
 export const TerminalContext = createContext();
 

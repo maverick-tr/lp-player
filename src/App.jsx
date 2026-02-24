@@ -13,6 +13,7 @@ import SearchBar from './components/Search/SearchBar';
 import Header from './components/Layout/Header';
 import Footer from './components/Layout/Footer';
 import TerminalWindow from './components/Terminal/TerminalWindow';
+import OnboardingOverlay from './components/Onboarding/OnboardingOverlay';
 import { memo } from 'react';
 
 // Main App component to wrap everything with context providers
@@ -54,6 +55,7 @@ const AppContent = memo(function AppContent() {
         isConnected={isConnected}
         style={{ zIndex: 99 }} // Ensure terminal stays on top
       />
+      <OnboardingOverlay />
     </div>
   );
 });

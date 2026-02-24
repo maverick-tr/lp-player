@@ -13,7 +13,7 @@ const vinylContainerVariants = {
     transition: { type: 'spring', stiffness: 300, damping: 25 }
   },
   left: {
-    x: -80,
+    x: -48,
     transition: { type: 'spring', stiffness: 300, damping: 25 }
   }
 };
@@ -67,13 +67,14 @@ const Header = memo(function Header() {
   return (
     <header className={`
       py-6 transition-colors duration-200
-      ${isDarkMode ? 'bg-tool-darker' : 'bg-white'}
+      ${isDarkMode ? 'bg-tool-dark' : 'bg-tool-light-mode-bg'}
     `}>
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center">
           {/* Left side - Add App Button */}
           <div className="w-10">
             <motion.button
+              data-onboarding="add-app"
               onClick={() => setShowAddAppModal(true)}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -133,7 +134,7 @@ const Header = memo(function Header() {
               {showCard && nowPlaying && (
                 <motion.div
                   key="now-playing"
-                  className="absolute left-1/2 -ml-2"
+                  className="absolute left-1/2"
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
@@ -148,6 +149,7 @@ const Header = memo(function Header() {
           {/* Settings on right */}
           <div className="w-10">
             <motion.button
+              data-onboarding="settings"
               onClick={() => setShowSettingsModal(true)}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}

@@ -188,6 +188,34 @@
         "error": null
       },
       "id": "10"
+    },
+    {
+      "name": "PersonaPlex-MLX",
+      "description": "MLX inference for NVIDIA PersonaPlex voice model on Apple Silicon",
+      "logoPath": "data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%20width%3D%2256%22%20height%3D%2256%22%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2245%22%20fill%3D%22none%22%20stroke%3D%22%23ef4444%22%20stroke-width%3D%225%22%2F%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2220%22%20fill%3D%22none%22%20stroke%3D%22%23ef4444%22%20stroke-width%3D%223%22%2F%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%225%22%20fill%3D%22%23ef4444%22%2F%3E%3Cline%20x1%3D%2250%22%20y1%3D%225%22%20x2%3D%2250%22%20y2%3D%2220%22%20stroke%3D%22%23ef4444%22%20stroke-width%3D%222%22%2F%3E%3C%2Fsvg%3E",
+      "category": "AI",
+      "tags": [
+        "mlx",
+        "apple-silicon",
+        "voice",
+        "tts",
+        "nvidia",
+        "audio"
+      ],
+      "port": "8998",
+      "execution": {
+        "rootPath": "/Users/st/Documents/SProjects/TEST/personaplex-mlx",
+        "command": "python -m personaplex_mlx.local_web -q 4 --voice NATF2 --text-prompt \"You enjoy having a good conversation.\"",
+        "environment": {
+          "activationCommand": "source .venv/bin/activate"
+        },
+        "isRunning": false,
+        "error": null
+      },
+      "id": "11"
+    }
+  ]
+}11"
     }
   ]
 }

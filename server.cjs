@@ -48,8 +48,91 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Constants
-const TOOLS_FILE = path.join(__dirname, 'src/data/tools.json');
+// Data directory resolution (mirrors server/services/dataDir.js for CJS)
+const resolveDataDir = () => {
+  if (process.env.LP_PLAYER_DATA_DIR) return process.env.LP_PLAYER_DATA_DIR;
+  const home = os.homedir();
+  if (process.platform === 'darwin') return path.join(home, 'Library', 'Application Support', 'LP Player');
+  if (process.platform === 'win32') return path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'LP Player');
+  return path.join(process.env.XDG_DATA_HOME || path.join(home, '.local', 'share'), 'LP Player');
+};
+
+const DATA_DIR = resolveDataDir();
+const fsSync = require('fs');
+if (!fsSync.existsSync(DATA_DIR)) fsSync.mkdirSync(DATA_DIR, { recursive: true });
+
+const DEFAULTS_DIR = path.join(__dirname, 'src', 'data');
+
+function ensureDataFile(filename, defaultContent) {
+  const target = path.join(DATA_DIR, filename);
+  if (!fsSync.existsSync(target)) {
+    const source = path.join(DEFAULTS_DIR, filename);
+    if (fsSync.existsSync(source)) {
+      fsSync.copyFileSync(source, target);
+      console.log(`[LP Player] Initialized ${filename} in ${DATA_DIR}`);
+    } else {
+      fsSync.writeFileSync(target, JSON.stringify(defaultContent, null, 2));
+      console.log(`[LP Player] Created default ${filename} in ${DATA_DIR}`);
+    }
+  }
+  return target;
+}
+
+const TOOLS_FILE = ensureDataFile('tools.json', { tools: [] });
+const SETTINGS_FILE = ensureDataFile('settings.json', {
+  ai: { apiUrl: '', apiKey: '', model: '' },
+  installation: { autoConfirmPortChanges: false, autoRunWithoutReview: false, alwaysCreatePythonVenv: true, preferUv: true, autoSkipIncompatiblePackages: false },
+  environment: { globalVariables: {} },
+  soundEffects: { enabled: true, genre: '90s pop' }
+});
+
+// ── Inline Settings Service (CJS-compatible, no dynamic import) ──
+const DEFAULT_SETTINGS = {
+  ai: { apiUrl: 'https://api.openai.com/v1', apiKey: '', model: 'gpt-4o' },
+  installation: { autoConfirmPortChanges: false, autoRunWithoutReview: false, alwaysCreatePythonVenv: true, preferUv: true, autoSkipIncompatiblePackages: false },
+  environment: { globalVariables: {} },
+  soundEffects: { enabled: true, genre: '90s pop' }
+};
+
+function readSettings() {
+  try {
+    if (!fsSync.existsSync(SETTINGS_FILE)) {
+      fsSync.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      return { ...DEFAULT_SETTINGS };
+    }
+    const data = fsSync.readFileSync(SETTINGS_FILE, 'utf-8');
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+  } catch (error) {
+    console.error('Error reading settings:', error.message);
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+function writeSettings(settings) {
+  const current = readSettings();
+  const merged = {
+    ai: { ...current.ai, ...settings.ai },
+    installation: { ...current.installation, ...settings.installation },
+    environment: settings.environment !== undefined
+      ? { globalVariables: {}, ...settings.environment }
+      : (current.environment || { globalVariables: {} }),
+    soundEffects: { ...current.soundEffects, ...settings.soundEffects }
+  };
+  fsSync.writeFileSync(SETTINGS_FILE, JSON.stringify(merged, null, 2));
+  return merged;
+}
+
+function redactForFrontend(settings) {
+  const redacted = JSON.parse(JSON.stringify(settings));
+  redacted._isAiConfigured = !!(redacted.ai.apiUrl && redacted.ai.apiUrl.trim() !== '' && redacted.ai.model && redacted.ai.model.trim() !== '');
+  if (redacted.ai.apiKey) {
+    const key = redacted.ai.apiKey;
+    redacted.ai.apiKey = key.length > 8
+      ? key.slice(0, 4) + '...' + key.slice(-4)
+      : '••••••••';
+  }
+  return redacted;
+}
 
 // Ensure proper MIME types for static files
 const serveStatic = express.static(path.join(__dirname, 'dist'), {
@@ -65,16 +148,9 @@ const serveStatic = express.static(path.join(__dirname, 'dist'), {
 app.use(serveStatic);
 
 // ── Dynamic ESM service imports ──────────────────────────────
-// Services are ES modules, load them lazily via dynamic import()
-let _settingsService = null;
+// Install service is ESM — dynamic import works in Node but NOT in pkg binaries.
+// Settings is inlined above (CJS-compatible). Install degrades gracefully.
 let _installService = null;
-
-async function getSettingsService() {
-  if (!_settingsService) {
-    _settingsService = await import('./server/services/settingsService.js');
-  }
-  return _settingsService;
-}
 
 async function getInstallService() {
   if (!_installService) {
@@ -114,9 +190,9 @@ wss.on('connection', (ws, req) => {
         ws.installId = data.installId;
       } else if (data.type === 'install-answer' && data.installId && data.questionId) {
         try {
-          const { resolveQuestion } = await getInstallService();
-          resolveQuestion(data.installId, data.questionId, data.answer);
-        } catch { /* ignore if service not loaded */ }
+          const svc = await getInstallService();
+          svc.resolveQuestion(data.installId, data.questionId, data.answer);
+        } catch { /* ignore if service not loaded (e.g. pkg binary) */ }
       }
     } catch (e) {
       console.error(`Error processing WebSocket message from ${clientId}:`, e);
@@ -222,9 +298,8 @@ function broadcastProcessOutput(toolId, data, outputType = 'stdout') {
 
 // ── Settings API ─────────────────────────────────────────────
 
-app.get('/api/settings', async (req, res) => {
+app.get('/api/settings', (req, res) => {
   try {
-    const { readSettings, redactForFrontend } = await getSettingsService();
     res.json(redactForFrontend(readSettings()));
   } catch (error) {
     console.error('Error reading settings:', error);
@@ -232,9 +307,8 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
-app.post('/api/settings', async (req, res) => {
+app.post('/api/settings', (req, res) => {
   try {
-    const { writeSettings, redactForFrontend } = await getSettingsService();
     const updated = writeSettings(req.body);
     res.json(redactForFrontend(updated));
   } catch (error) {
@@ -245,7 +319,6 @@ app.post('/api/settings', async (req, res) => {
 
 app.post('/api/settings/test-ai', async (req, res) => {
   try {
-    const { readSettings } = await getSettingsService();
     const settings = readSettings();
     if (!settings.ai.apiKey) {
       return res.status(400).json({ error: 'No API key configured' });
@@ -296,19 +369,20 @@ app.post('/api/install/start', async (req, res) => {
       existingTools = JSON.parse(data).tools || [];
     } catch { /* ignore */ }
 
-    const { startInstallation } = await getInstallService();
-    const installId = await startInstallation(repoUrl, targetPath, existingTools, broadcastInstallProgress);
+    const svc = await getInstallService();
+    const installId = await svc.startInstallation(repoUrl, targetPath, existingTools, broadcastInstallProgress);
     res.json({ installId });
   } catch (error) {
-    console.error('Install start error:', error);
-    res.status(500).json({ error: error.message });
+    const isImportError = error.code === 'ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING';
+    console.error('Install start error:', isImportError ? 'AI-assisted install not available in binary mode' : error);
+    res.status(isImportError ? 501 : 500).json({ error: isImportError ? 'AI-assisted install is not available in standalone binary mode. Use npm or dev mode instead.' : error.message });
   }
 });
 
 app.post('/api/install/cancel/:installId', async (req, res) => {
   try {
-    const { cancelInstallation } = await getInstallService();
-    const ok = cancelInstallation(req.params.installId);
+    const svc = await getInstallService();
+    const ok = svc.cancelInstallation(req.params.installId);
     res.json({ success: ok });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -317,8 +391,8 @@ app.post('/api/install/cancel/:installId', async (req, res) => {
 
 app.get('/api/install/status/:installId', async (req, res) => {
   try {
-    const { getInstallation } = await getInstallService();
-    const state = getInstallation(req.params.installId);
+    const svc = await getInstallService();
+    const state = svc.getInstallation(req.params.installId);
     if (!state) return res.status(404).json({ error: 'Installation not found' });
     res.json({
       installId: state.installId,
@@ -334,8 +408,8 @@ app.get('/api/install/status/:installId', async (req, res) => {
 
 app.get('/api/install/log/:installId', async (req, res) => {
   try {
-    const { getInstallLog } = await getInstallService();
-    const log = await getInstallLog(req.params.installId);
+    const svc = await getInstallService();
+    const log = await svc.getInstallLog(req.params.installId);
     if (!log) return res.status(404).json({ error: 'Log not found' });
     res.type('text/plain').send(log);
   } catch (error) {
@@ -418,6 +492,40 @@ app.post('/api/fetch-image', async (req, res) => {
   }
 });
 
+// ── Git Clone API (no AI required) ───────────────────────────
+
+app.post('/api/git-clone', async (req, res) => {
+  try {
+    const { repoUrl } = req.body;
+    let { targetPath } = req.body;
+    if (!repoUrl || !targetPath) {
+      return res.status(400).json({ error: 'repoUrl and targetPath are required' });
+    }
+
+    targetPath = targetPath.trim();
+    if (targetPath.startsWith('~/') || targetPath === '~') {
+      targetPath = path.join(os.homedir(), targetPath.slice(1));
+    }
+    targetPath = path.resolve(targetPath);
+
+    // Extract repo name from URL for the clone folder
+    const repoName = repoUrl.replace(/\.git$/, '').split('/').pop() || 'project';
+    const clonedPath = path.join(targetPath, repoName);
+
+    await new Promise((resolve, reject) => {
+      exec(`git clone "${repoUrl}" "${clonedPath}"`, { timeout: 120000 }, (err, stdout, stderr) => {
+        if (err) reject(new Error(stderr || err.message));
+        else resolve(stdout);
+      });
+    });
+
+    res.json({ success: true, clonedPath, repoName });
+  } catch (error) {
+    console.error('Git clone error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Tools API ────────────────────────────────────────────────
 
 app.get('/api/tools', async (req, res) => {
@@ -454,9 +562,21 @@ app.post('/api/tools/run', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing required parameters' });
     }
 
-    const fullCommand = envCommand
-      ? `cd "${rootPath}" && ${envCommand} && ${command}`
-      : `cd "${rootPath}" && ${command}`;
+    if (runningProcesses.has(toolId)) {
+      return res.status(409).json({ success: false, message: 'A process is already running for this tool' });
+    }
+
+    // Handle .sh scripts
+    let fullCommand;
+    if (command.endsWith('.sh') || command.startsWith('./')) {
+      fullCommand = envCommand
+        ? `cd "${rootPath}" && ${envCommand} && bash ${command}`
+        : `cd "${rootPath}" && bash ${command}`;
+    } else {
+      fullCommand = envCommand
+        ? `cd "${rootPath}" && ${envCommand} && ${command}`
+        : `cd "${rootPath}" && ${command}`;
+    }
 
     // Build environment: inherit system env + overlay custom vars
     const processEnv = { ...process.env };
@@ -465,8 +585,14 @@ app.post('/api/tools/run', async (req, res) => {
     }
 
     try {
-      const proc = exec(fullCommand, { shell: '/bin/bash', windowsHide: true, env: processEnv });
+      const proc = exec(fullCommand, {
+        shell: '/bin/bash',
+        windowsHide: true,
+        maxBuffer: 1024 * 1024 * 10,
+        env: processEnv
+      });
       runningProcesses.set(toolId, proc);
+      broadcastProcessOutput(toolId, `$ ${fullCommand}`, 'command');
 
       proc.stdout.on('data', (data) => {
         broadcastProcessOutput(toolId, data, 'stdout');
@@ -480,6 +606,11 @@ app.post('/api/tools/run', async (req, res) => {
         runningProcesses.delete(toolId);
         broadcastProcessOutput(toolId, `Process exited with code ${code}`, 'exit');
         updateToolRunningStatus(toolId, false);
+      });
+
+      proc.on('error', (error) => {
+        broadcastProcessOutput(toolId, `Process error: ${error.message}`, 'error');
+        runningProcesses.delete(toolId);
       });
 
       res.json({ success: true });
@@ -504,11 +635,40 @@ app.post('/api/tools/stop', async (req, res) => {
     }
 
     try {
-      proc.kill();
+      broadcastProcessOutput(toolId, 'Stopping process...', 'info');
+
+      // Kill process and all child processes
+      if (proc.pid) {
+        if (process.platform !== 'win32') {
+          try {
+            // Kill the entire process group (sends SIGTERM to all child processes)
+            exec(`pkill -TERM -P ${proc.pid}`, (error) => {
+              if (error) { /* ignore, fallback below */ }
+              proc.kill('SIGTERM');
+            });
+          } catch {
+            proc.kill();
+          }
+        } else {
+          try {
+            exec(`taskkill /pid ${proc.pid} /T /F`, (error) => {
+              if (error) proc.kill();
+            });
+          } catch {
+            proc.kill();
+          }
+        }
+      } else {
+        proc.kill();
+      }
+
       runningProcesses.delete(toolId);
+      broadcastProcessOutput(toolId, 'Process terminated by user', 'exit');
       await updateToolRunningStatus(toolId, false);
       res.json({ success: true });
     } catch (killError) {
+      runningProcesses.delete(toolId);
+      broadcastProcessOutput(toolId, `Error stopping process: ${killError.message}`, 'error');
       res.status(500).json({ success: false, message: `Error killing process: ${killError.message}` });
     }
   } catch (error) {
@@ -596,17 +756,85 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist/index.html'));
 });
 
+// ── Auto-open in app mode ─────────────────────────────────────
+
+function openAppWindow(url) {
+  // Skip if --no-open flag or LP_PLAYER_NO_OPEN env is set
+  if (args.includes('--no-open') || process.env.LP_PLAYER_NO_OPEN) return;
+
+  const { execFile } = require('child_process');
+  const { spawn } = require('child_process');
+  const platform = process.platform;
+
+  if (platform === 'darwin') {
+    // macOS: use browser binary directly with execFile (no shell quoting issues)
+    const browsers = [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+      '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+    ];
+    const found = browsers.find(p => fsSync.existsSync(p));
+    if (found) {
+      console.log(`  \x1b[2mOpening app window via: ${path.basename(path.dirname(path.dirname(path.dirname(found))))}\x1b[0m`);
+      const child = spawn(found, [`--app=${url}`], { detached: true, stdio: 'ignore' });
+      child.unref();
+    } else {
+      console.log('  \x1b[2mOpening in default browser\x1b[0m');
+      exec(`open "${url}"`, () => {});
+    }
+  } else if (platform === 'win32') {
+    const winBrowsers = [
+      `${process.env.PROGRAMFILES}\\Google\\Chrome\\Application\\chrome.exe`,
+      `${process.env['PROGRAMFILES(X86)']}\\Google\\Chrome\\Application\\chrome.exe`,
+      `${process.env.PROGRAMFILES}\\Microsoft\\Edge\\Application\\msedge.exe`,
+      `${process.env['PROGRAMFILES(X86)']}\\Microsoft\\Edge\\Application\\msedge.exe`,
+      `${process.env.PROGRAMFILES}\\BraveSoftware\\Brave-Browser\\Application\\brave.exe`,
+    ];
+    const found = winBrowsers.find(p => p && fsSync.existsSync(p));
+    if (found) {
+      const child = spawn(found, [`--app=${url}`], { detached: true, stdio: 'ignore' });
+      child.unref();
+    } else {
+      exec(`start "" "${url}"`, () => {});
+    }
+  } else {
+    // Linux
+    const linuxBrowsers = ['/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium'];
+    const found = linuxBrowsers.find(p => fsSync.existsSync(p));
+    if (found) {
+      const child = spawn(found, [`--app=${url}`], { detached: true, stdio: 'ignore' });
+      child.unref();
+    } else {
+      exec(`xdg-open "${url}" 2>/dev/null`, () => {});
+    }
+  }
+}
+
 // Start the server
 server.listen(PORT, HOST, () => {
-  console.log(`Production server running at http://${HOST}:${PORT}`);
-  console.log('Available endpoints:');
-  console.log('  GET  /api/tools - Get all tools');
-  console.log('  POST /api/tools - Update tools');
-  console.log('  POST /api/tools/run - Run a tool');
-  console.log('  POST /api/tools/stop - Stop a tool');
-  console.log('  GET  /api/settings - Get settings');
-  console.log('  POST /api/settings - Update settings');
-  console.log('  POST /api/install/start - Start installation');
-  console.log('  POST /api/install/cancel/:id - Cancel installation');
-  console.log('  WebSocket server - ws://localhost:' + PORT);
+  const localUrl = `http://localhost:${PORT}`;
+  const networkUrl = `http://${HOST === '0.0.0.0' ? getLocalIP() : HOST}:${PORT}`;
+  console.log('');
+  console.log(`  \x1b[32mLP Player is running\x1b[0m`);
+  console.log('');
+  console.log(`  \x1b[1mLocal:\x1b[0m   ${localUrl}`);
+  if (HOST === '0.0.0.0') {
+    console.log(`  \x1b[1mNetwork:\x1b[0m ${networkUrl}`);
+  }
+  console.log(`  \x1b[1mData:\x1b[0m    ${DATA_DIR}`);
+  console.log('');
+
+  // Auto-open app window
+  openAppWindow(localUrl);
 });
+
+function getLocalIP() {
+  const nets = os.networkInterfaces();
+  for (const ifaces of Object.values(nets)) {
+    for (const iface of ifaces) {
+      if (iface.family === 'IPv4' && !iface.internal) return iface.address;
+    }
+  }
+  return 'localhost';
+}

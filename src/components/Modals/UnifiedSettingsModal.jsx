@@ -65,14 +65,12 @@ function UnifiedSettingsModal({ onClose }) {
     const updates = {};
 
     if (tabIndex === 1) {
-      // AI tab
+      // AI tab (includes installation preferences)
       updates.ai = {
         apiUrl: aiUrl,
         model: aiModel,
         ...(aiKey ? { apiKey: aiKey } : {})
       };
-    } else if (tabIndex === 2) {
-      // Installation tab
       updates.installation = {
         autoConfirmPortChanges: autoConfirmPort,
         autoRunWithoutReview: autoRun,
@@ -80,7 +78,7 @@ function UnifiedSettingsModal({ onClose }) {
         preferUv: preferUv,
         autoSkipIncompatiblePackages: autoSkipIncompat
       };
-    } else if (tabIndex === 3) {
+    } else if (tabIndex === 2) {
       // Environment tab
       const globalVariables = {};
       envEntries.forEach(({ key, value }) => {
@@ -89,7 +87,7 @@ function UnifiedSettingsModal({ onClose }) {
         }
       });
       updates.environment = { globalVariables };
-    } else if (tabIndex === 4) {
+    } else if (tabIndex === 3) {
       // Sound tab
       updates.soundEffects = {
         enabled: soundEnabled,
@@ -142,7 +140,7 @@ function UnifiedSettingsModal({ onClose }) {
 
   const labelClass = `block text-xs font-medium mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`;
 
-  const tabNames = ['Appearance', 'AI', 'Installation', 'Environment', 'Sound'];
+  const tabNames = ['Appearance', 'AI', 'Environment', 'Sound'];
 
   return (
     <Dialog open={true} onClose={onClose} className="relative z-50">
@@ -330,15 +328,18 @@ function UnifiedSettingsModal({ onClose }) {
                           {testResult.success ? `Connected — ${testResult.models?.length || 0} models available` : testResult.error}
                         </p>
                       )}
-                    </Tab.Panel>
 
-                    {/* ---- Installation Tab ---- */}
-                    <Tab.Panel className="space-y-3">
-                      <Toggle label="Auto-run without plan review" description="Skip the plan review step and execute immediately" value={autoRun} onChange={setAutoRun} isDarkMode={isDarkMode} />
-                      <Toggle label="Auto-resolve port conflicts" description="Automatically use an alternative port without asking" value={autoConfirmPort} onChange={setAutoConfirmPort} isDarkMode={isDarkMode} />
-                      <Toggle label="Always create Python venv" description="Create a virtual environment for Python projects even if not in README" value={alwaysVenv} onChange={setAlwaysVenv} isDarkMode={isDarkMode} />
-                      <Toggle label="Prefer uv for Python" description="Use uv instead of pip when available" value={preferUv} onChange={setPreferUv} isDarkMode={isDarkMode} />
-                      <Toggle label="Auto-skip incompatible packages" description="Automatically drop packages that require a different Python version" value={autoSkipIncompat} onChange={setAutoSkipIncompat} isDarkMode={isDarkMode} />
+                      {/* AI Install Preferences */}
+                      <div className={`border-t pt-3 mt-1 ${isDarkMode ? 'border-[#bccc0f]/15' : 'border-gray-200'}`}>
+                        <p className={`text-xs font-medium mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>AI Install Preferences</p>
+                        <div className="space-y-3">
+                          <Toggle label="Auto-run without plan review" description="Skip the plan review step and execute immediately" value={autoRun} onChange={setAutoRun} isDarkMode={isDarkMode} />
+                          <Toggle label="Auto-resolve port conflicts" description="Automatically use an alternative port without asking" value={autoConfirmPort} onChange={setAutoConfirmPort} isDarkMode={isDarkMode} />
+                          <Toggle label="Always create Python venv" description="Create a virtual environment for Python projects even if not in README" value={alwaysVenv} onChange={setAlwaysVenv} isDarkMode={isDarkMode} />
+                          <Toggle label="Prefer uv for Python" description="Use uv instead of pip when available" value={preferUv} onChange={setPreferUv} isDarkMode={isDarkMode} />
+                          <Toggle label="Auto-skip incompatible packages" description="Automatically drop packages that require a different Python version" value={autoSkipIncompat} onChange={setAutoSkipIncompat} isDarkMode={isDarkMode} />
+                        </div>
+                      </div>
                     </Tab.Panel>
 
                     {/* ---- Environment Tab ---- */}
