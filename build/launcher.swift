@@ -35,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
 
-        process.terminationHandler = { [weak self] proc in
+        process.terminationHandler = { proc in
             DispatchQueue.main.async {
                 if proc.terminationStatus != 0 && proc.terminationStatus != 15 {
                     let alert = NSAlert()

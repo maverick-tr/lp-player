@@ -7,9 +7,9 @@ FROM node:20-slim AS build
 
 WORKDIR /app
 
-# Install dependencies
+# Install ALL dependencies (need devDeps for vite build)
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Copy source for frontend build
 COPY . .
@@ -17,13 +17,17 @@ COPY . .
 # Build frontend
 RUN npm run build
 
+# Install production-only deps in a separate directory
+RUN mkdir /prod_deps && cp package.json package-lock.json* /prod_deps/ && \
+    cd /prod_deps && npm ci --omit=dev
+
 # ── Production stage ────────────────────────────────────────
 FROM node:20-slim
 
 WORKDIR /app
 
 # Copy only what's needed for production
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /prod_deps/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server.cjs ./server.cjs
 COPY --from=build /app/server/services ./server/services
