@@ -68,7 +68,8 @@ CLEANEOF
     "autoSkipIncompatiblePackages": false
   },
   "environment": { "globalVariables": {} },
-  "soundEffects": { "enabled": true, "genre": "90s pop" }
+  "soundEffects": { "enabled": true, "genre": "90s pop" },
+  "paths": { "defaultProjectsFolder": "" }
 }
 CLEANEOF
 
