@@ -43,7 +43,8 @@ const SETTINGS_FILE = ensureFile('settings.json', {
     autoSkipIncompatiblePackages: false
   },
   environment: { globalVariables: {} },
-  soundEffects: { enabled: true, genre: '90s pop' }
+  soundEffects: { enabled: true, genre: '90s pop' },
+  paths: { defaultProjectsFolder: '' }
 });
 
 export { DATA_DIR, TOOLS_FILE, SETTINGS_FILE };

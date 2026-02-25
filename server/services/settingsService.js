@@ -22,6 +22,9 @@ const DEFAULT_SETTINGS = {
   soundEffects: {
     enabled: true,
     genre: '90s pop'
+  },
+  paths: {
+    defaultProjectsFolder: ''
   }
 };
 
@@ -49,7 +52,8 @@ function writeSettings(settings) {
       environment: settings.environment !== undefined
         ? { globalVariables: {}, ...settings.environment }
         : (current.environment || { globalVariables: {} }),
-      soundEffects: { ...current.soundEffects, ...settings.soundEffects }
+      soundEffects: { ...current.soundEffects, ...settings.soundEffects },
+      paths: { ...current.paths, ...settings.paths }
     };
     fs.writeFileSync(SETTINGS_PATH, JSON.stringify(merged, null, 2));
     return merged;

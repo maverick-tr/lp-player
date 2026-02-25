@@ -83,11 +83,16 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
   const [gitRepoUrl, setGitRepoUrl] = useState('');
   const [gitTargetPath, setGitTargetPath] = useState('');
   const [portWarning, setPortWarning] = useState('');
+  // Directory autocomplete state
+  const [dirSuggestions, setDirSuggestions] = useState([]);
+  const [showDirSuggestions, setShowDirSuggestions] = useState(false);
+  const [rootPathInput, setRootPathInput] = useState(existingTool?.execution?.rootPath || '');
   // AI install state
   const [installState, setInstallState] = useState(null); // { phase, plan, steps, question, error }
   const [installId, setInstallId] = useState(null);
   const wsRef = useRef(null);
   const { settings, isAiConfigured } = useSettings();
+  const defaultFolder = settings?.paths?.defaultProjectsFolder || '';
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detectingEnv, setDetectingEnv] = useState(false);
@@ -101,6 +106,26 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
   // Extract all existing tags and categories for autocomplete
   const existingTags = Array.from(new Set(allTools.flatMap(tool => tool.tags)));
   const existingCategories = Array.from(new Set(allTools.map(tool => tool.category)));
+
+  // Fetch directory list from default projects folder
+  useEffect(() => {
+    if (!defaultFolder) return;
+    fetch(`${window.location.origin}/api/list-directories`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ basePath: defaultFolder })
+    })
+      .then(res => res.json())
+      .then(data => setDirSuggestions(data.directories || []))
+      .catch(() => setDirSuggestions([]));
+  }, [defaultFolder]);
+
+  // Pre-fill git target path with default folder
+  useEffect(() => {
+    if (defaultFolder && !gitTargetPath) {
+      setGitTargetPath(defaultFolder);
+    }
+  }, [defaultFolder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for port conflicts
   useEffect(() => {
@@ -339,23 +364,26 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       }
 
       const result = await response.json();
-      
+
       let activationCommand = '';
-      if (result.hasPythonVenv) {
-        activationCommand = 'source .venv/bin/activate';
+      if (result.hasPythonVenv && result.venvDir) {
+        const isWindows = result.platform === 'win32';
+        activationCommand = isWindows
+          ? `${result.venvDir}\\Scripts\\activate`
+          : `source ${result.venvDir}/bin/activate`;
       } else if (result.hasConda) {
         activationCommand = 'conda activate env-name';
       }
-      setAppData({
-        ...appData,
+      setAppData(prev => ({
+        ...prev,
         execution: {
-          ...appData.execution,
+          ...prev.execution,
           environment: {
-            ...appData.execution.environment,
+            ...prev.execution.environment,
             activationCommand
           }
         }
-      });
+      }));
     } catch (error) {
       console.error('Error detecting environment:', error);
       setError(`Failed to detect environment: ${error.message}`);
@@ -363,6 +391,64 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       setDetectingEnv(false);
     }
   };
+
+  // Root path change handler with autocomplete logic
+  const handleRootPathChange = (e) => {
+    const val = e.target.value;
+    setRootPathInput(val);
+
+    // If starts with / or ~, treat as absolute — update appData directly, no autocomplete
+    if (val.startsWith('/') || val.startsWith('~')) {
+      setAppData(prev => ({
+        ...prev,
+        execution: { ...prev.execution, rootPath: val }
+      }));
+      setShowDirSuggestions(false);
+      return;
+    }
+
+    // Relative input: show matching suggestions from default folder
+    if (defaultFolder && val) {
+      const matches = dirSuggestions.filter(d =>
+        d.toLowerCase().includes(val.toLowerCase())
+      );
+      setShowDirSuggestions(matches.length > 0);
+      // Set the full path as value
+      setAppData(prev => ({
+        ...prev,
+        execution: { ...prev.execution, rootPath: `${defaultFolder}/${val}` }
+      }));
+    } else if (defaultFolder && !val) {
+      setAppData(prev => ({
+        ...prev,
+        execution: { ...prev.execution, rootPath: '' }
+      }));
+      setShowDirSuggestions(false);
+    } else {
+      setAppData(prev => ({
+        ...prev,
+        execution: { ...prev.execution, rootPath: val }
+      }));
+      setShowDirSuggestions(false);
+    }
+  };
+
+  const handleSelectDirectory = (dirName) => {
+    const fullPath = `${defaultFolder}/${dirName}`;
+    setRootPathInput(fullPath);
+    setAppData(prev => ({
+      ...prev,
+      execution: { ...prev.execution, rootPath: fullPath }
+    }));
+    setShowDirSuggestions(false);
+  };
+
+  // Whether current input is a relative name that doesn't match any existing directory
+  const isNewFolderName = defaultFolder
+    && rootPathInput
+    && !rootPathInput.startsWith('/')
+    && !rootPathInput.startsWith('~')
+    && !dirSuggestions.some(d => d.toLowerCase() === rootPathInput.toLowerCase());
 
   const handleEnvironmentCommandChange = (e) => {
     const value = e.target.value;
@@ -484,11 +570,13 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
       if (!response.ok) throw new Error(data.error || 'Clone failed');
       setCloneProgress('done');
       // Pre-fill the manual form with cloned path
+      const clonedRoot = data.clonedPath || gitTargetPath;
       setAppData(prev => ({
         ...prev,
         name: data.repoName || '',
-        execution: { ...prev.execution, rootPath: data.clonedPath || gitTargetPath }
+        execution: { ...prev.execution, rootPath: clonedRoot }
       }));
+      setRootPathInput(clonedRoot);
     } catch (err) {
       setError(err.message);
       setCloneProgress('error');
@@ -752,6 +840,11 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
                       required
                     />
+                    {defaultFolder && gitTargetPath === defaultFolder && (
+                      <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        Projects will be cloned into this directory
+                      </p>
+                    )}
                   </div>
 
                   {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -1081,14 +1174,48 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                     Root Path*
                   </label>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="execution.rootPath"
-                      value={appData.execution.rootPath}
-                      onChange={handleInputChange}
-                      className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
-                      required
-                    />
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={rootPathInput}
+                        onChange={handleRootPathChange}
+                        onFocus={() => {
+                          if (defaultFolder && rootPathInput && !rootPathInput.startsWith('/') && !rootPathInput.startsWith('~')) {
+                            const matches = dirSuggestions.filter(d =>
+                              d.toLowerCase().includes(rootPathInput.toLowerCase())
+                            );
+                            setShowDirSuggestions(matches.length > 0);
+                          }
+                        }}
+                        onBlur={() => setTimeout(() => setShowDirSuggestions(false), 150)}
+                        placeholder={defaultFolder ? 'folder-name or /absolute/path' : '/path/to/project'}
+                        className={`form-input w-full py-1 ${isDarkMode ? 'bg-tool-dark border-[#bccc0f]/25 text-white' : 'bg-white border-gray-300 text-black'}`}
+                        required
+                      />
+                      {showDirSuggestions && (
+                        <div className={`absolute z-10 mt-1 w-full rounded-md shadow-lg max-h-40 overflow-auto ${
+                          isDarkMode ? 'bg-tool-dark border border-[#bccc0f]/25' : 'bg-white border border-gray-300'
+                        }`}>
+                          <ul className="py-1">
+                            {dirSuggestions
+                              .filter(d => !rootPathInput || d.toLowerCase().includes(rootPathInput.toLowerCase()))
+                              .map(dir => (
+                                <li
+                                  key={dir}
+                                  className={`px-3 py-1 cursor-pointer text-sm ${
+                                    isDarkMode
+                                      ? 'hover:bg-[#bccc0f]/10 text-white'
+                                      : 'hover:bg-gray-100 text-black'
+                                  }`}
+                                  onMouseDown={() => handleSelectDirectory(dir)}
+                                >
+                                  {dir}
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={detectEnvironment}
@@ -1102,6 +1229,11 @@ function AddAppModal({ onClose, existingTool = null, isEditing = false }) {
                       {detectingEnv ? 'Detecting...' : 'Detect Env'}
                     </button>
                   </div>
+                  {isNewFolderName && (
+                    <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Will be created at <span className="font-mono">{defaultFolder}/{rootPathInput}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

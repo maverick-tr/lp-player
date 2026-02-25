@@ -550,6 +550,9 @@ app.post('/api/git-clone', async (req, res) => {
     }
     targetPath = path.resolve(targetPath);
 
+    // Ensure target directory exists
+    await fs.mkdir(targetPath, { recursive: true });
+
     const repoName = repoUrl.replace(/\.git$/, '').split('/').pop() || 'project';
     const clonedPath = path.join(targetPath, repoName);
 
@@ -790,77 +793,81 @@ app.post('/api/detect-environment', async (req, res) => {
     // Check for various environment indicators
     const environmentInfo = {
       hasPythonVenv: false,
+      venvDir: null,       // which venv dir was found (.venv, venv, env)
       hasConda: false,
+      condaDir: null,
       hasNodeModules: false,
       hasDotEnv: false,
-      hasDocker: false
+      hasDocker: false,
+      platform: process.platform  // win32, darwin, linux
     };
-    
+
     try {
-      // Check for Python virtual environment
-      try {
-        const venvPaths = [
-          path.join(rootPath, '.venv'),
-          path.join(rootPath, 'venv'),
-          path.join(rootPath, 'env')
-        ];
-        
-        for (const venvPath of venvPaths) {
-          const activateScript = path.join(venvPath, 'bin', 'activate');
-          await fs.access(activateScript);
-          environmentInfo.hasPythonVenv = true;
-          break;
+      // Check for Python virtual environment (per-path try/catch so all are tested)
+      const venvNames = ['.venv', 'venv', 'env'];
+      for (const name of venvNames) {
+        try {
+          // Check both Unix and Windows activate paths
+          const unixActivate = path.join(rootPath, name, 'bin', 'activate');
+          const winActivate = path.join(rootPath, name, 'Scripts', 'activate.bat');
+          try {
+            await fs.access(unixActivate);
+            environmentInfo.hasPythonVenv = true;
+            environmentInfo.venvDir = name;
+            break;
+          } catch {
+            await fs.access(winActivate);
+            environmentInfo.hasPythonVenv = true;
+            environmentInfo.venvDir = name;
+            break;
+          }
+        } catch {
+          // This venv path doesn't exist, try next
         }
-      } catch (e) {
-        // Ignore errors if not found
       }
-      
+
       // Check for Conda environment
-      try {
-        const condaPaths = [
-          path.join(rootPath, 'conda-meta'),
-          path.join(rootPath, 'miniconda3'),
-          path.join(rootPath, 'anaconda3')
-        ];
-        
-        for (const condaPath of condaPaths) {
-          await fs.access(condaPath);
+      const condaNames = ['conda-meta', 'miniconda3', 'anaconda3'];
+      for (const name of condaNames) {
+        try {
+          await fs.access(path.join(rootPath, name));
           environmentInfo.hasConda = true;
+          environmentInfo.condaDir = name;
           break;
+        } catch {
+          // This conda path doesn't exist, try next
         }
-      } catch (e) {
-        // Ignore errors if not found
       }
-      
+
       // Check for Node.js project
       try {
         await fs.access(path.join(rootPath, 'node_modules'));
         environmentInfo.hasNodeModules = true;
-      } catch (e) {
-        // Ignore errors if not found
+      } catch {
+        // not found
       }
-      
+
       // Check for .env file
       try {
         await fs.access(path.join(rootPath, '.env'));
         environmentInfo.hasDotEnv = true;
-      } catch (e) {
-        // Ignore errors if not found
+      } catch {
+        // not found
       }
-      
+
       // Check for Docker
       try {
         await fs.access(path.join(rootPath, 'Dockerfile'));
         environmentInfo.hasDocker = true;
-      } catch (e) {
-        // Ignore errors if not found
+      } catch {
+        // not found
       }
-      
+
     } catch (error) {
       console.error(`Error checking environment: ${error.message}`);
-      return res.status(500).json({ 
-        success: false, 
-        message: `Error checking environment: ${error.message}` 
+      return res.status(500).json({
+        success: false,
+        message: `Error checking environment: ${error.message}`
       });
     }
     
@@ -870,6 +877,47 @@ app.post('/api/detect-environment', async (req, res) => {
     console.error('Error detecting environment:', error);
     res.status(500).json({ success: false, message: error.message });
   }
+});
+
+// ── Directory Listing API ──────────────────────────────────────
+app.post('/api/list-directories', async (req, res) => {
+  try {
+    let { basePath } = req.body;
+    if (!basePath) {
+      return res.status(400).json({ error: 'basePath is required' });
+    }
+
+    basePath = basePath.trim();
+    if (basePath.startsWith('~/') || basePath === '~') {
+      basePath = path.join(os.homedir(), basePath.slice(1));
+    }
+    basePath = path.resolve(basePath);
+
+    const entries = await fs.readdir(basePath, { withFileTypes: true });
+    const directories = entries
+      .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+      .map(e => e.name)
+      .sort();
+
+    res.json({ directories });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return res.json({ directories: [] });
+    }
+    console.error('Error listing directories:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── UV Detection API ──────────────────────────────────────────
+app.get('/api/check-uv', (req, res) => {
+  exec('uv --version', { timeout: 5000 }, (err, stdout) => {
+    if (err) {
+      return res.json({ installed: false, version: null });
+    }
+    const version = stdout.trim().replace(/^uv\s+/, '');
+    res.json({ installed: true, version });
+  });
 });
 
 // API endpoint for system stats

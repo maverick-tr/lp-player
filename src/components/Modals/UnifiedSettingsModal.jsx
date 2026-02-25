@@ -24,6 +24,10 @@ function UnifiedSettingsModal({ onClose }) {
 
   // Environment state
   const [envEntries, setEnvEntries] = useState([]);
+  const [defaultProjectsFolder, setDefaultProjectsFolder] = useState('');
+
+  // UV detection state
+  const [uvStatus, setUvStatus] = useState(null); // null | { installed, version }
 
   // Sound state
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -54,8 +58,19 @@ function UnifiedSettingsModal({ onClose }) {
       // Load sound settings
       setSoundEnabled(settings.soundEffects?.enabled !== false);
       setSoundGenre(settings.soundEffects?.genre || '90s pop');
+
+      // Load paths
+      setDefaultProjectsFolder(settings.paths?.defaultProjectsFolder || '');
     }
   }, [settings]);
+
+  // Check UV installation on mount
+  useEffect(() => {
+    fetch(`${window.location.origin}/api/check-uv`)
+      .then(res => res.json())
+      .then(data => setUvStatus(data))
+      .catch(() => setUvStatus({ installed: false, version: null }));
+  }, []);
 
   const handleSave = async (tabIndex) => {
     setSaving(true);
@@ -87,6 +102,7 @@ function UnifiedSettingsModal({ onClose }) {
         }
       });
       updates.environment = { globalVariables };
+      updates.paths = { defaultProjectsFolder: defaultProjectsFolder.trim() };
     } else if (tabIndex === 3) {
       // Sound tab
       updates.soundEffects = {
@@ -337,6 +353,25 @@ function UnifiedSettingsModal({ onClose }) {
                           <Toggle label="Auto-resolve port conflicts" description="Automatically use an alternative port without asking" value={autoConfirmPort} onChange={setAutoConfirmPort} isDarkMode={isDarkMode} />
                           <Toggle label="Always create Python venv" description="Create a virtual environment for Python projects even if not in README" value={alwaysVenv} onChange={setAlwaysVenv} isDarkMode={isDarkMode} />
                           <Toggle label="Prefer uv for Python" description="Use uv instead of pip when available" value={preferUv} onChange={setPreferUv} isDarkMode={isDarkMode} />
+                          {uvStatus && (
+                            <div className="ml-12 -mt-1">
+                              {uvStatus.installed ? (
+                                <span className="text-xs text-green-400">&#10003; uv {uvStatus.version} detected</span>
+                              ) : (
+                                <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  uv is not installed.{' '}
+                                  <a
+                                    href="https://docs.astral.sh/uv/getting-started/installation/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={isDarkMode ? 'text-[#bccc0f]/70 hover:text-[#bccc0f]' : 'text-[#7a8a0b] hover:text-[#4a5a06]'}
+                                  >
+                                    Install uv
+                                  </a>
+                                </span>
+                              )}
+                            </div>
+                          )}
                           <Toggle label="Auto-skip incompatible packages" description="Automatically drop packages that require a different Python version" value={autoSkipIncompat} onChange={setAutoSkipIncompat} isDarkMode={isDarkMode} />
                         </div>
                       </div>
@@ -404,6 +439,25 @@ function UnifiedSettingsModal({ onClose }) {
                         </svg>
                         Add Variable
                       </button>
+
+                      {/* Default Projects Folder */}
+                      <div className={`border-t pt-3 mt-3 ${isDarkMode ? 'border-[#bccc0f]/15' : 'border-gray-200'}`}>
+                        <label className={labelClass}>Default Projects Folder</label>
+                        <input
+                          type="text"
+                          value={defaultProjectsFolder}
+                          onChange={e => setDefaultProjectsFolder(e.target.value)}
+                          placeholder={`${
+                            typeof window !== 'undefined' && navigator.platform?.includes('Mac')
+                              ? '/Users/you/Projects'
+                              : '/home/you/Projects'
+                          }`}
+                          className={inputClass}
+                        />
+                        <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                          Default directory for cloning and creating new projects
+                        </p>
+                      </div>
                     </Tab.Panel>
 
                     {/* ---- Sound Tab ---- */}
