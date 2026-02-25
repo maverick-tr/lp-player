@@ -4,7 +4,7 @@
   "description": "LP Player — Local Project Manager. A centralized dashboard for managing, installing, and running local development applications.",
   "type": "module",
   "bin": {
-    "lp-player": "./bin/lp-player.js"
+    "lp-player": "./bin/lp-player.cjs"
   },
   "files": [
     "bin/",
