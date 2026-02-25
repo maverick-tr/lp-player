@@ -1,7 +1,7 @@
 {
   "ai": {
     "apiUrl": "",
-    "apiKey": "123456",
+    "apiKey": "",
     "model": ""
   },
   "installation": {

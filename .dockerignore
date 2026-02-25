@@ -1,0 +1,9 @@
+node_modules
+build
+.vite
+.git
+.claude
+*.tgz
+*.dmg
+*.md
+.DS_Store
