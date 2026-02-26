@@ -117,7 +117,7 @@ curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/release/insta
 
 > **macOS users:** If you see _"LP Player is damaged and can't be opened"_, run this once after installing:
 > ```bash
-> xattr -cr /Applications/LP\ Player.app
+> xattr -c /Applications/LP\ Player.app
 > ```
 > This removes the macOS quarantine flag applied to downloaded apps that aren't signed with an Apple Developer certificate.
 
