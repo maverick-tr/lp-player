@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import os from 'os';
@@ -911,7 +911,12 @@ app.post('/api/list-directories', async (req, res) => {
 
 // ── UV Detection API ──────────────────────────────────────────
 app.get('/api/check-uv', (req, res) => {
-  exec('uv --version', { timeout: 5000 }, (err, stdout) => {
+  // Use login shell to get full PATH (GUI apps / pkg binaries may have stripped PATH)
+  const shell = process.platform === 'win32' ? 'cmd' : '/bin/bash';
+  const shellArgs = process.platform === 'win32'
+    ? ['/c', 'uv --version']
+    : ['-lc', 'uv --version'];
+  execFile(shell, shellArgs, { timeout: 5000 }, (err, stdout) => {
     if (err) {
       return res.json({ installed: false, version: null });
     }

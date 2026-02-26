@@ -9,8 +9,10 @@
   "files": [
     "bin/",
     "dist/",
+    "!dist/**/*.map",
     "server.cjs",
     "server/services/",
+    "!server/package.json",
     "src/data/",
     "package.json"
   ],

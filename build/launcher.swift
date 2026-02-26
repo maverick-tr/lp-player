@@ -61,12 +61,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Give the server a moment to start, then open the browser
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            if let url = URL(string: "http://localhost:4243") {
-                NSWorkspace.shared.open(url)
-            }
-        }
+        // server.cjs handles opening Chrome in --app mode automatically
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

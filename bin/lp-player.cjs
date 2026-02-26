@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const path = require('path');
-const { execSync } = require('child_process');
 
 // Resolve the server entry point relative to the package root
 const serverPath = path.join(__dirname, '..', 'server.cjs');
@@ -32,28 +31,11 @@ if (args.includes('--help') || args.includes('-h')) {
   process.exit(0);
 }
 
-// Open browser after a short delay
-const port = (() => {
-  const idx = args.indexOf('--port');
-  return idx !== -1 && args[idx + 1] ? args[idx + 1] : (process.env.PORT || '4243');
-})();
-
-const host = (() => {
-  const idx = args.indexOf('--host');
-  return idx !== -1 && args[idx + 1] ? args[idx + 1] : 'localhost';
-})();
-
-setTimeout(() => {
-  const url = `http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`;
-  try {
-    const platform = process.platform;
-    if (platform === 'darwin') execSync(`open "${url}"`);
-    else if (platform === 'win32') execSync(`start "${url}"`);
-    else execSync(`xdg-open "${url}"`);
-  } catch {
-    console.log(`  Open in browser: ${url}`);
-  }
-}, 1500);
+// npm usage: don't auto-open browser (server.cjs has its own openAppWindow
+// that's meant for standalone binaries/DMG only). Pass --no-open to suppress it.
+if (!args.includes('--no-open')) {
+  args.push('--no-open');
+}
 
 // Start the server
 require(serverPath);

@@ -9,8 +9,8 @@ set -e
 #   ./build.sh npm              # build npm package only
 #   ./build.sh binary           # build binaries for current OS
 #   ./build.sh binary-all       # build binaries for all platforms
-#   ./build.sh docker           # build docker image
 #   ./build.sh dmg              # build macOS app (.dmg)
+#   ./build.sh installer        # build Windows installer (.exe setup)
 #   ./build.sh all              # build everything
 #   ./build.sh clean            # remove all build artifacts
 #   ./build.sh install-npm      # build + install npm package globally
@@ -205,20 +205,62 @@ build_binary_all() {
   done
 }
 
-build_docker() {
+build_windows_installer() {
   divider
-  info "Building Docker image..."
-  if ! docker info &>/dev/null; then
-    error "Docker daemon is not running"
+  info "Building Windows installer..."
+
+  # Check for makensis
+  if ! command -v makensis &>/dev/null; then
+    error "NSIS not found. Install with: brew install nsis"
     return 1
   fi
-  clean_data
-  docker build -t lp-player:${VERSION} -t lp-player:latest . 2>&1 | while read -r line; do
-    echo -e "    ${DIM}${line}${RESET}"
-  done
-  restore_data
-  success "Docker image: lp-player:${VERSION}"
-  docker images lp-player --format "    {{.Repository}}:{{.Tag}}  {{.Size}}"
+
+  # Ensure win-x64 binary exists
+  local src_exe="${BUILD_DIR}/lp-player-win-x64.exe"
+  if [ ! -f "$src_exe" ]; then
+    info "Windows binary not found, building..."
+    build_binary "win-x64"
+  fi
+
+  # Create GUI copy (patch PE header: console → GUI subsystem)
+  local gui_exe="${BUILD_DIR}/LP Player.exe"
+  cp "$src_exe" "$gui_exe"
+
+  info "Patching PE header (console → GUI)..."
+  python3 -c "
+import struct
+with open('${BUILD_DIR}/LP Player.exe', 'r+b') as f:
+    f.seek(0x3C)
+    pe_offset = struct.unpack('<I', f.read(4))[0]
+    f.seek(pe_offset + 0x5C)
+    f.write(struct.pack('<H', 2))  # IMAGE_SUBSYSTEM_WINDOWS_GUI
+"
+
+  # Copy icon to build dir
+  cp public/favicon.ico "${BUILD_DIR}/favicon.ico"
+
+  # Run NSIS compiler
+  local setup_name="LP-Player-${VERSION}-Setup.exe"
+  local abs_build_dir="$(cd "${BUILD_DIR}" && pwd)"
+  makensis -DVERSION="${VERSION}" \
+    -DBUILD_DIR="${abs_build_dir}" \
+    -NOCD \
+    "build/installer.nsi" 2>&1 | while read -r line; do
+      echo -e "    ${DIM}${line}${RESET}"
+    done
+
+  # Clean up intermediate files
+  rm -f "${BUILD_DIR}/LP Player.exe"
+  rm -f "${BUILD_DIR}/favicon.ico"
+
+  local setup_path="${BUILD_DIR}/${setup_name}"
+  if [ -f "$setup_path" ]; then
+    local size=$(du -h "$setup_path" | cut -f1 | xargs)
+    success "Windows installer: ${setup_path} (${size})"
+  else
+    error "NSIS build failed"
+    return 1
+  fi
 }
 
 build_icon() {
@@ -424,7 +466,7 @@ build_all() {
   info "Building everything..."
   build_npm
   build_binary_all
-  build_docker
+  build_windows_installer
   # Build DMG on macOS
   if [[ "$(detect_platform)" == macos-* ]]; then
     build_dmg
@@ -498,14 +540,6 @@ uninstall_binary() {
   fi
 }
 
-uninstall_docker() {
-  divider
-  info "Removing Docker containers and images..."
-  docker stop lp-player 2>/dev/null && docker rm lp-player 2>/dev/null
-  docker rmi lp-player:${VERSION} lp-player:latest 2>/dev/null
-  success "Docker cleanup done"
-}
-
 uninstall_data() {
   divider
   local data_dir=""
@@ -541,8 +575,8 @@ show_menu() {
   echo "    1) npm package          (.tgz)"
   echo "    2) Binary (this OS)     (standalone executable)"
   echo "    3) Binaries (all OS)    (mac-arm64, mac-x64, linux-x64, win-x64)"
-  echo "    4) Docker image"
-  echo "    5) macOS app (.dmg)     (drag-to-install disk image)"
+  echo "    4) macOS app (.dmg)     (drag-to-install disk image)"
+  echo "    5) Windows installer    (.exe setup)"
   echo "    6) All of the above"
   echo ""
   echo -e "  ${CYAN}Install (local testing)${RESET}"
@@ -552,11 +586,10 @@ show_menu() {
   echo -e "  ${CYAN}Uninstall${RESET}"
   echo "    9) Uninstall npm global"
   echo "   10) Uninstall binary"
-  echo "   11) Uninstall Docker"
-  echo "   12) Remove user data directory"
+  echo "   11) Remove user data directory"
   echo ""
   echo -e "  ${CYAN}Other${RESET}"
-  echo "   13) Clean build artifacts"
+  echo "   12) Clean build artifacts"
   echo "    0) Exit"
   echo ""
   echo -n "  Choose (comma-separated for multiple, e.g. 1,2): "
@@ -567,16 +600,15 @@ run_choice() {
     1)  build_npm ;;
     2)  build_binary_current ;;
     3)  build_binary_all ;;
-    4)  build_docker ;;
-    5)  build_dmg ;;
+    4)  build_dmg ;;
+    5)  build_windows_installer ;;
     6)  build_all ;;
     7)  install_npm ;;
     8)  install_binary ;;
     9)  uninstall_npm ;;
     10) uninstall_binary ;;
-    11) uninstall_docker ;;
-    12) uninstall_data ;;
-    13) clean ;;
+    11) uninstall_data ;;
+    12) clean ;;
     0)  exit 0 ;;
     *)  error "Unknown option: $1" ;;
   esac
@@ -590,14 +622,13 @@ if [ $# -gt 0 ]; then
     npm)            build_npm ;;
     binary)         build_binary_current ;;
     binary-all)     build_binary_all ;;
-    docker)         build_docker ;;
     dmg)            build_dmg ;;
+    installer)      build_windows_installer ;;
     all)            build_all ;;
     install-npm)    install_npm ;;
     install-binary) install_binary ;;
     uninstall-npm)    uninstall_npm ;;
     uninstall-binary) uninstall_binary ;;
-    uninstall-docker) uninstall_docker ;;
     uninstall-data)   uninstall_data ;;
     clean)          clean ;;
     *)
@@ -607,14 +638,13 @@ if [ $# -gt 0 ]; then
       echo "    npm              Build npm .tgz package"
       echo "    binary           Build binary for current OS"
       echo "    binary-all       Build binaries for all platforms"
-      echo "    docker           Build Docker image"
       echo "    dmg              Build macOS app (.dmg)"
+      echo "    installer        Build Windows installer (.exe setup)"
       echo "    all              Build everything"
       echo "    install-npm      Build + install npm globally"
       echo "    install-binary   Build + install binary to /usr/local/bin"
       echo "    uninstall-npm    Uninstall npm global package"
       echo "    uninstall-binary Remove binary from /usr/local/bin"
-      echo "    uninstall-docker Remove Docker containers/images"
       echo "    uninstall-data   Remove user data directory"
       echo "    clean            Remove build artifacts"
       echo ""

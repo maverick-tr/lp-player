@@ -526,14 +526,68 @@ app.post('/api/git-clone', async (req, res) => {
   }
 });
 
+// ── Directory Listing API ──────────────────────────────────────
+app.post('/api/list-directories', async (req, res) => {
+  try {
+    let { basePath } = req.body;
+    if (!basePath) {
+      return res.status(400).json({ error: 'basePath is required' });
+    }
+
+    basePath = basePath.trim();
+    if (basePath.startsWith('~/') || basePath === '~') {
+      basePath = path.join(os.homedir(), basePath.slice(1));
+    }
+    basePath = path.resolve(basePath);
+
+    const entries = await fs.readdir(basePath, { withFileTypes: true });
+    const directories = entries
+      .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+      .map(e => e.name)
+      .sort();
+
+    res.json({ directories });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return res.json({ directories: [] });
+    }
+    console.error('Error listing directories:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── UV Detection API ──────────────────────────────────────────
+app.get('/api/check-uv', (req, res) => {
+  // Use login shell to get full PATH (GUI apps / pkg binaries may have stripped PATH)
+  const shell = process.platform === 'win32' ? 'cmd' : '/bin/bash';
+  const shellArgs = process.platform === 'win32'
+    ? ['/c', 'uv --version']
+    : ['-lc', 'uv --version'];
+  const { execFile } = require('child_process');
+  execFile(shell, shellArgs, { timeout: 5000 }, (err, stdout) => {
+    if (err) {
+      return res.json({ installed: false, version: null });
+    }
+    const version = stdout.trim().replace(/^uv\s+/, '');
+    res.json({ installed: true, version });
+  });
+});
+
 // ── Tools API ────────────────────────────────────────────────
 
 app.get('/api/tools', async (req, res) => {
   try {
     const data = await fs.readFile(TOOLS_FILE, 'utf8');
-    res.json(JSON.parse(data));
+    const parsed = JSON.parse(data);
+    res.json(parsed);
   } catch (error) {
     console.error('Error reading tools:', error);
+    // Return empty tools on corrupt/empty file instead of 500
+    if (error instanceof SyntaxError) {
+      const empty = { tools: [] };
+      await fs.writeFile(TOOLS_FILE, JSON.stringify(empty, null, 2)).catch(() => {});
+      return res.json(empty);
+    }
     res.status(500).json({ error: 'Failed to read tools' });
   }
 });
@@ -544,8 +598,11 @@ app.post('/api/tools', async (req, res) => {
     if (!tools || !Array.isArray(tools)) {
       return res.status(400).json({ error: 'Invalid tools data' });
     }
-    const data = await fs.readFile(TOOLS_FILE, 'utf8');
-    const currentData = JSON.parse(data);
+    let currentData = { tools: [] };
+    try {
+      const data = await fs.readFile(TOOLS_FILE, 'utf8');
+      currentData = JSON.parse(data);
+    } catch { /* corrupt or missing — start fresh */ }
     const updatedData = { ...currentData, tools };
     await fs.writeFile(TOOLS_FILE, JSON.stringify(updatedData, null, 2), 'utf8');
     res.json({ success: true, message: 'Tools updated successfully' });
