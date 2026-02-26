@@ -1,224 +1,203 @@
-# LAP - Local App Manager (LP Player)
+<p align="center">
+  <img src="assets/logo.png" alt="LP Player" width="120" height="120">
+</p>
 
-A sophisticated and beautifully crafted web application that serves as a centralized hub for managing and running local applications and projects. Built with React, Vite, and Tailwind CSS with meticulous attention to detail and user experience.
+<h1 align="center">LP Player</h1>
 
-## ✨ Core Features
+<p align="center">
+  Your local apps. One dashboard. <strong>Zero friction.</strong><br/>
+  A free, open-source project manager for local development apps.<br/>
+  <a href="https://lp-player.sh">lp-player.sh</a>
+</p>
 
-### 🚀 Project Management
-- ✅ **Centralized Dashboard** - Manage all local applications from one unified interface
-- ✅ **One-Click Execution** - Start projects instantly with a single click
-- ✅ **Multiple Concurrent Apps** - Run several applications simultaneously
-- ✅ **Smart Process Management** - Automatic process tracking and lifecycle management
-- ✅ **Environment Auto-Detection** - Intelligent detection of Python venv, Conda, Node.js environments
-- ✅ **Port Conflict Detection** - Warns when ports are already in use by other applications
-- ✅ **Project Categorization** - Organize apps by categories with custom tags
+<p align="center">
+  <a href="https://www.npmjs.com/package/lp-player"><img src="https://img.shields.io/npm/v/lp-player?style=flat" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/lp-player"><img src="https://img.shields.io/npm/dm/lp-player?style=flat" alt="npm downloads"></a>
+  <a href="https://github.com/maverick-tr/lp-player/releases/latest"><img src="https://img.shields.io/github/v/release/maverick-tr/lp-player?style=flat" alt="GitHub release"></a>
+  <a href="https://github.com/maverick-tr/lp-player/stargazers"><img src="https://img.shields.io/github/stars/maverick-tr/lp-player?style=flat" alt="GitHub stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat" alt="License: MIT"></a>
+</p>
 
-### 🖥️ Advanced Terminal System
-- ✅ **Real-time Output Streaming** - Live terminal output via WebSocket connections
-- ✅ **Multi-Tab Terminal Interface** - Switch between outputs of running applications seamlessly
-- ✅ **ANSI Color Support** - Full terminal color parsing and display
-- ✅ **Auto-minimizing Terminal** - Smart terminal that auto-minimizes when apps are running
-- ✅ **Auto-close with Countdown** - Terminal automatically closes after apps stop with visual countdown
-- ✅ **Terminal Persistence** - Output history preserved during app lifecycle
-- ✅ **Connection Status Indicators** - Real-time WebSocket connection monitoring
+<p align="center">
+  <a href="#features">Features</a> · <a href="#install">Install</a> · <a href="#screenshots">Screenshots</a> · <a href="#getting-started">Getting Started</a> · <a href="#contributing">Contributing</a>
+</p>
 
-### 🎨 Beautiful UI/UX Design
-- ✅ **Vinyl Record-Inspired Cards** - Unique animated vinyl record design for app cards
-- ✅ **Dark/Light Theme Support** - Seamless theme switching with system preference detection
-- ✅ **Advanced Color Controls** - Sepia filter and hue rotation sliders for personalization
-- ✅ **Comprehensive Color Palette** - 10+ carefully selected color shades throughout the interface
-- ✅ **Auto-Generated App Icons** - Randomly colored vinyl SVG icons for apps without custom logos
-- ✅ **Smooth Animations** - Framer Motion powered transitions and micro-interactions
-- ✅ **Responsive Design** - Perfect adaptation to desktop, tablet, and mobile screens
-- ✅ **Interactive Hover Effects** - Dynamic cursor-following gradients and scaling animations
+<br/>
 
-### 🔍 Smart Search & Discovery
-- ✅ **Multi-field Search** - Search by app name, path, tags, or categories
-- ✅ **Real-time Filtering** - Instant results with debounced search input
-- ✅ **Tag-based Organization** - Auto-complete suggestions for tags and categories
-- ✅ **Visual Search Feedback** - Animated search bar with focus states
+<!-- Replace with your own GIF/screenshot -->
+<p align="center">
+  <img src="assets/demo.gif" alt="LP Player Demo" width="800">
+</p>
+<p align="center"><em>Add your projects, hit play, and go.</em></p>
 
-### 📊 System Monitoring
-- ✅ **Real-time CPU Monitoring** - Live CPU usage graphs in the footer
-- ✅ **Memory Usage Tracking** - Real-time RAM consumption visualization
-- ✅ **WebSocket-based Updates** - Efficient system stats streaming
-- ✅ **Color-coded Performance** - Green/Yellow/Red indicators based on usage thresholds
+<br/>
 
-### 🔧 Configuration & Management
-- ✅ **Environment Command Auto-fill** - Smart detection and suggestion of activation commands
-- ✅ **Custom Port Configuration** - Set and validate port numbers for web applications
-- ✅ **Path Validation** - Real-time path verification and directory browsing
-- ✅ **Image Upload Support** - Custom logo upload with preview functionality
-- ✅ **Bulk Operations** - Add, edit, and delete multiple applications efficiently
+## What is LP Player?
 
-### 🌐 Networking & Connectivity
-- ✅ **Smart Port Links** - Clickable port links that only work when apps are running
-- ✅ **WebSocket Auto-reconnection** - Robust connection handling with retry logic
-- ✅ **Cross-platform Support** - Works on macOS, Windows, and Linux
-- ✅ **Multi-host Deployment** - Configurable host and port settings
+LP Player is a centralized dashboard for managing and running all your local development projects. Register any app — Python, Node.js, Go, anything — start and stop it with one click, monitor terminal output in real time, and let AI handle the boring setup.
 
-### 🎯 Attention to Detail Features
+No more juggling terminal tabs, forgetting launch commands, or re-reading READMEs. One place for everything.
 
-#### Visual Polish
-- ✅ **Smoke Effect Animation** - Beautiful smoke particles when terminal closes
-- ✅ **Loading State Animations** - Elegant loading dots with staggered animations
-- ✅ **Gooey Visual Effects** - SVG filters for modern visual appeal
-- ✅ **Custom Typography** - Inconsolata monospace font for technical aesthetic
-- ✅ **Gradient Overlays** - Subtle gradients and textures throughout the interface
+<br/>
 
-#### Smart Interactions
-- ✅ **Auto-save Functionality** - Changes persist without manual save actions
-- ✅ **Confirmation Dialogs** - Prevent accidental data loss with smart confirmations
-- ✅ **Keyboard Shortcuts** - Intuitive keyboard navigation support
-- ✅ **Touch-friendly Controls** - Optimized for touch devices and mobile usage
+## Features
 
-#### Developer Experience
-- ✅ **Hot Module Replacement** - Fast development with Vite HMR
-- ✅ **TypeScript Support** - Full type checking and IntelliSense
-- ✅ **ESLint Integration** - Code quality enforcement
-- ✅ **Modular Architecture** - Clean separation of concerns and reusable components
+**One-Click Launch** — Start any project instantly. Search across all your apps by name, tags, or category.
 
-#### Data Management
-- ✅ **Local Storage Fallback** - Graceful degradation when server is unavailable
-- ✅ **JSON Data Persistence** - Reliable data storage with backup mechanisms
-- ✅ **Error Boundary Protection** - Graceful error handling and recovery
-- ✅ **Session State Management** - Preserves user preferences across sessions
+**Real-Time Terminal** — Live output streaming with full ANSI color support. Multiple tabs, one unified view.
 
-## 🚀 Getting Started
+**AI-Assisted Setup** — Point to a GitHub repo. AI reads the README, detects the stack, installs dependencies, and configures everything automatically.
+
+**Smart Detection** — Auto-detects Python venv, Conda, Node.js environments and fills activation commands for you.
+
+**Port Management** — Detects port conflicts before you run. Click to open running apps in your browser.
+
+**System Monitoring** — CPU and memory usage at a glance in the footer. Know when your machine is struggling.
+
+**Beautiful UI** — Vinyl record-inspired app cards with auto-generated colorful icons, smooth Framer Motion animations, dark/light themes, sepia filters, and hue rotation.
+
+**Sound Effects** — Optional vinyl crackle and retro sound effects for a unique experience.
+
+**Cross-Platform** — Works on macOS, Windows, and Linux. Available as npm package, standalone binary, DMG, or Windows installer.
+
+<br/>
+
+## Screenshots
+
+<!-- Replace with your own screenshots -->
+<p align="center">
+  <img src="assets/screenshot-dashboard.png" alt="Dashboard" width="800"><br/>
+  <em>The main dashboard with your projects</em>
+</p>
+
+<p align="center">
+  <img src="assets/screenshot-add-app.png" alt="Add App" width="800"><br/>
+  <em>Add apps manually or let AI do it from a GitHub URL</em>
+</p>
+
+<br/>
+
+## Install
+
+### Quick Start (no install needed)
+
+```bash
+npx lp-player
+```
+
+### npm (global install)
+
+```bash
+npm install -g lp-player
+lp-player
+```
+
+### Shell Script (standalone binary)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/main/install.sh | bash
+```
+
+### Download
+
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon) | [LP-Player.dmg](https://github.com/maverick-tr/lp-player/releases/latest/download/lp-player.dmg) |
+| macOS (Intel) | [lp-player-macos-x64](https://github.com/maverick-tr/lp-player/releases/latest/download/lp-player-macos-x64) |
+| Windows | [LP-Player-Setup.exe](https://github.com/maverick-tr/lp-player/releases/latest/download/lp-player-win.exe) |
+| Linux (x64) | [lp-player-linux-x64](https://github.com/maverick-tr/lp-player/releases/latest/download/lp-player-linux-x64) |
+
+> All releases are hosted on [GitHub Releases](https://github.com/maverick-tr/lp-player/releases) — fully transparent, no tracking.
+
+<br/>
+
+## Getting Started
+
+After launching LP Player, open `http://localhost:4243` in your browser.
+
+### 1. Set Your Default Projects Folder
+
+Go to **Settings → Environment** and set your default projects directory (e.g. `~/Projects`). This enables autocomplete when adding apps and auto-fills paths for git cloning.
+
+### 2. Configure AI (Optional)
+
+Go to **Settings → AI** and add your API key for AI-assisted installations. LP Player can read a project's README, detect the tech stack, install dependencies, and configure everything automatically.
+
+If you have [uv](https://docs.astral.sh/uv/) installed, enable "Prefer uv" for faster Python package installs.
+
+### 3. Add Your First App
+
+Click **"Add App"** and either:
+- **Manual**: Enter the project path, run command, and optional environment activation command. LP Player auto-detects Python venvs, Conda environments, and Node.js setups.
+- **From Git**: Paste a GitHub URL. LP Player clones the repo and sets it up.
+- **AI Install**: Paste a GitHub URL and let AI handle everything — from cloning to dependency installation.
+
+> **Tip:** Apps without a custom logo automatically get a colorful vinyl record icon — each one unique.
+
+### 4. Hit Play
+
+Click the power knob on any app card to start it. Terminal output streams in real time. Click the port number to open the app in your browser.
+
+<br/>
+
+## Development
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or pnpm
 
-### Installation & Development
+- Node.js 18+
+- npm
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd LAP
-   ```
+### Run from Source
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/maverick-tr/lp-player.git
+cd lp-player
+npm install
+./start.sh          # dev mode (frontend + API)
+./start.sh prod     # production mode
+```
 
-3. **Development Mode** (Frontend + API)
-   ```bash
-   npm run dev:api
-   # or
-   npm start
-   ```
+Or using npm scripts:
 
-4. **Frontend Only** (No persistence)
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev:api     # frontend on :4242 + API on :4243
+npm run build       # production build
+npm run prod        # build + serve on :4243
+```
 
-### Production Deployment
+<br/>
 
-1. **Build and Run**
-   ```bash
-   npm run prod
-   ```
+## Tech Stack
 
-2. **Build Only**
-   ```bash
-   npm run build
-   npm run preview
-   ```
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite, Tailwind CSS, Framer Motion, Headless UI |
+| Backend | Node.js, Express, WebSocket (ws) |
+| Process Management | Child Process API with real-time streaming |
+| Data | JSON file persistence with triple-fallback (cache → localStorage → API → file) |
+| Font | Inconsolata (monospace) |
 
-3. **Using the Start Script**
-   ```bash
-   # Development
-   ./start.sh
+<br/>
 
-   # Production
-   ./start.sh prod
+## Contributing
 
-   # Clean build
-   ./start.sh prod clean
-   ```
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and guidelines.
 
-## 📖 API Reference
+1. Fork the repo
+2. Create a feature branch
+3. Make your changes
+4. Submit a Pull Request
 
-### REST Endpoints
-- `GET /api/tools` - Retrieve all applications
-- `POST /api/tools` - Update applications data
-- `POST /api/tools/run` - Execute an application
-- `POST /api/tools/stop` - Stop a running application
-- `POST /api/detect-environment` - Auto-detect project environment
-- `GET /api/system-stats` - Get current system statistics
+<br/>
 
-### WebSocket Events
-- `subscribe` - Subscribe to application output
-- `process-output` - Receive real-time terminal output
-- `system-stats` - Real-time system monitoring data
-- `ping/pong` - Connection keep-alive mechanism
+## License
 
-## 🛠️ Technology Stack
+[MIT License](LICENSE) — free to use, modify, and distribute with visible attribution to [maverick-tr](https://github.com/maverick-tr) and [LP Player](https://lp-player.sh).
 
-### Frontend
-- **React 18** - Modern React with hooks and context
-- **Vite** - Ultra-fast development and building
-- **Tailwind CSS** - Utility-first CSS framework
-- **Framer Motion** - Advanced animations and transitions
-- **Headless UI** - Accessible UI components
-- **React Hot Toast** - Beautiful notification system
-
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** - Web application framework
-- **WebSocket (ws)** - Real-time communication
-- **Child Process** - System command execution
-- **File System** - Data persistence and file operations
-
-### Development Tools
-- **ESLint** - Code linting and quality
-- **PostCSS** - CSS processing and optimization
-- **Concurrently** - Run multiple processes simultaneously
-
-## 🎨 Customization
-
-### Theme Configuration
-- Modify `src/context/ThemeContext.jsx` for theme options
-- Adjust color palette in `tailwind.config.js`
-- Customize animations in individual components
-
-### Adding New Features
-- Follow the modular component structure
-- Use the established context patterns for state management
-- Maintain TypeScript compatibility for new features
-
-## 📝 Configuration Files
-
-- `tools.json` - Application definitions and metadata
-- `tailwind.config.js` - Design system configuration
-- `vite.config.js` - Build tool configuration
-- `package.json` - Dependencies and scripts
-
-## 🔒 Security Features
-
-- ✅ **CORS Protection** - Configurable cross-origin resource sharing
-- ✅ **Input Validation** - Sanitized user inputs and path validation
-- ✅ **Process Isolation** - Secure process execution with limited privileges
-- ✅ **WebSocket Authentication** - Client verification and connection management
-
-## 🎯 Performance Optimizations
-
-- ✅ **Memoized Components** - React.memo for expensive re-renders
-- ✅ **Debounced Search** - Optimized search input handling
-- ✅ **Lazy Loading** - Component and resource lazy loading
-- ✅ **Efficient WebSocket** - Minimal data transfer and smart reconnection
-
-## 📄 License
-
-This project is proprietary software. All rights reserved.
-
-## 👥 Contributing
-
-Please follow the established code style and component patterns. Ensure all new features include proper error handling and responsive design considerations.
+<br/>
 
 ---
 
-**LAP Development Team** - Crafting beautiful developer tools with attention to every detail. 
+<p align="center">
+  <sub>Made by <a href="https://github.com/maverick-tr">maverick-tr</a> · <a href="https://lp-player.sh">lp-player.sh</a></sub>
+</p>
