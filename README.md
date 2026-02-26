@@ -26,11 +26,15 @@
 
 <br/>
 
-<!-- Replace with your own GIF/screenshot -->
 <p align="center">
-  <img src="assets/demo.gif" alt="LP Player Demo" width="800">
+  <img src="assets/LPPlayer.gif" alt="LP Player Demo" width="800">
 </p>
 <p align="center"><em>Add your projects, hit play, and go.</em></p>
+
+<p align="center">
+  <img src="assets/demo.gif" alt="AI-Assisted Setup Demo" width="800">
+</p>
+<p align="center"><em>AI-assisted setup — paste a GitHub URL and let AI handle the rest.</em></p>
 
 <br/>
 
@@ -115,7 +119,7 @@ curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/main/install.
 
 ## Getting Started
 
-After launching LP Player, open `http://localhost:4243` in your browser.
+LP Player opens automatically when launched. If it doesn't, browse to `http://localhost:4243` — this is the default port.
 
 ### 1. Set Your Default Projects Folder
 
