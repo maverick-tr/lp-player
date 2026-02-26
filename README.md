@@ -115,6 +115,12 @@ curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/release/insta
 
 > All releases are hosted on [GitHub Releases](https://github.com/maverick-tr/lp-player/releases) — fully transparent, no tracking.
 
+> **macOS users:** If you see _"LP Player is damaged and can't be opened"_, run this once after installing:
+> ```bash
+> xattr -cr /Applications/LP\ Player.app
+> ```
+> This removes the macOS quarantine flag applied to downloaded apps that aren't signed with an Apple Developer certificate.
+
 <br/>
 
 ## Getting Started
