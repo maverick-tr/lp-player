@@ -2,7 +2,7 @@
 set -e
 
 # LP Player — Quick Install Script
-# Usage: curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/release/install.sh | bash
 
 REPO="maverick-tr/lp-player"
 NAME="lp-player"

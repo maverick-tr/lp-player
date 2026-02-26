@@ -101,7 +101,7 @@ lp-player
 ### Shell Script (standalone binary)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/release/install.sh | bash
 ```
 
 ### Download
