@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="https://lp-player.sh"><img src="https://img.shields.io/badge/website-lp--player.sh-bccc0f?style=flat" alt="Website"></a>
   <a href="https://www.npmjs.com/package/lp-player"><img src="https://img.shields.io/npm/v/lp-player?style=flat" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/lp-player"><img src="https://img.shields.io/npm/dm/lp-player?style=flat" alt="npm downloads"></a>
   <a href="https://github.com/maverick-tr/lp-player/releases/latest"><img src="https://img.shields.io/github/v/release/maverick-tr/lp-player?style=flat" alt="GitHub release"></a>
@@ -192,12 +193,12 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup inst
 
 ## License
 
-[MIT License](LICENSE) — free to use, modify, and distribute with visible attribution to [maverick-tr](https://github.com/maverick-tr) and [LP Player](https://lp-player.sh).
+[MIT License](LICENSE) — free to use, modify, and distribute © [maverick-tr](https://github.com/maverick-tr).
 
 <br/>
 
 ---
 
 <p align="center">
-  <sub>Made by <a href="https://github.com/maverick-tr">maverick-tr</a> · <a href="https://lp-player.sh">lp-player.sh</a></sub>
+  <sub><a href="https://lp-player.sh">lp-player.sh</a></sub>
 </p>
