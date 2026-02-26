@@ -3,6 +3,7 @@
 </p>
 
 <h1 align="center">LP Player</h1>
+<p align="center"><em>Local Project Player</em></p>
 
 <p align="center">
   Your local apps. One dashboard. <strong>Zero friction.</strong><br/>
