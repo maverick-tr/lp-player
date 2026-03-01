@@ -110,7 +110,7 @@ curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/release/insta
 |----------|----------|
 | macOS (Apple Silicon) | [LP-Player.dmg](https://github.com/maverick-tr/lp-player/releases/latest/download/lp-player.dmg) |
 | macOS (Intel) | [lp-player-macos-x64](https://github.com/maverick-tr/lp-player/releases/latest/download/lp-player-macos-x64) |
-| Windows | [LP-Player-Setup.exe](https://github.com/maverick-tr/lp-player/releases/latest/download/lp-player-win.exe) |
+| Windows | [LP-Player-Setup.exe](https://github.com/maverick-tr/lp-player/releases/latest/download/LP-Player-1.0.0-Setup.exe) |
 | Linux (x64) | [lp-player-linux-x64](https://github.com/maverick-tr/lp-player/releases/latest/download/lp-player-linux-x64) |
 
 > All releases are hosted on [GitHub Releases](https://github.com/maverick-tr/lp-player/releases) — fully transparent, no tracking.
@@ -120,6 +120,28 @@ curl -fsSL https://raw.githubusercontent.com/maverick-tr/lp-player/release/insta
 > xattr -c /Applications/LP\ Player.app
 > ```
 > This removes the macOS quarantine flag applied to downloaded apps that aren't signed with an Apple Developer certificate.
+
+<br/>
+
+## AI Provider Compatibility
+
+LP Player's AI-assisted setup works with any provider that exposes an OpenAI-compatible API (`/v1/chat/completions`). Configure the API URL, key, and model in **Settings → AI**.
+
+| Provider | API URL | Example Models |
+|----------|---------|----------------|
+| OpenAI | `https://api.openai.com/v1` | gpt-4o, gpt-4o-mini, o3-mini |
+| Anthropic (via proxy) | `https://api.anthropic.com/v1` | claude-sonnet-4-20250514 |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | gemini-2.0-flash, gemini-2.5-pro |
+| Ollama (local) | `http://localhost:11434/v1` | llama3, codellama, mistral |
+| LM Studio (local) | `http://localhost:1234/v1` | Any loaded model |
+| Groq | `https://api.groq.com/openai/v1` | llama-3.3-70b, mixtral-8x7b |
+| Together AI | `https://api.together.xyz/v1` | meta-llama/Llama-3-70b |
+| OpenRouter | `https://openrouter.ai/api/v1` | Any model via OpenRouter |
+| Mistral AI | `https://api.mistral.ai/v1` | mistral-large, codestral |
+| DeepSeek | `https://api.deepseek.com/v1` | deepseek-chat, deepseek-coder |
+| Any OpenAI-compatible | Your custom URL | Any compatible model |
+
+> **No API key needed** for local providers like Ollama and LM Studio.
 
 <br/>
 
