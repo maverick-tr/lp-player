@@ -141,7 +141,7 @@ LP Player's AI-assisted setup works with any provider that exposes an OpenAI-com
 | DeepSeek | `https://api.deepseek.com/v1` | deepseek-chat, deepseek-coder |
 | Any OpenAI-compatible | Your custom URL | Any compatible model |
 
-> **No API key needed** for local providers like Ollama and LM Studio.
+> **No real API key needed** for local providers like Ollama and LM Studio — just enter any placeholder value (e.g. `12345`) as the field is required.
 
 <br/>
 
