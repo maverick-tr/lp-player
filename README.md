@@ -15,8 +15,8 @@
   <a href="https://lp-player.sh"><img src="https://img.shields.io/badge/website-lp--player.sh-bccc0f?style=flat" alt="Website"></a>
   <a href="https://www.npmjs.com/package/lp-player"><img src="https://img.shields.io/npm/v/lp-player?style=flat" alt="npm version"></a>
   <a href="https://www.npmjs.com/package/lp-player"><img src="https://img.shields.io/npm/dm/lp-player?style=flat" alt="npm downloads"></a>
-  <a href="https://github.com/maverick-tr/lp-player/releases/latest"><img src="https://img.shields.io/github/v/release/maverick-tr/lp-player?style=flat" alt="GitHub release"></a>
-  <a href="https://github.com/maverick-tr/lp-player/stargazers"><img src="https://img.shields.io/github/stars/maverick-tr/lp-player?style=flat" alt="GitHub stars"></a>
+  <a href="https://github.com/maverick-tr/lp-player/releases/latest"><img src="https://img.shields.io/github/v/release/maverick-tr/lp-player?style=flat&amp;t=1" alt="GitHub release"></a>
+  <a href="https://github.com/maverick-tr/lp-player/stargazers"><img src="https://img.shields.io/github/stars/maverick-tr/lp-player?style=flat&amp;t=1" alt="GitHub stars"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat" alt="License: MIT"></a>
 </p>
 
